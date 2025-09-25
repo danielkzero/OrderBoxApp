@@ -9,7 +9,7 @@ class ProdutoController extends Controller
 {
     public function index()
     {
-        $produtos = Produtos::with(['categoria', 'precos', 'grades.variacoes'])->get();
+        $produtos = Produtos::with(['categorias', 'precos', 'grades.variacoes'])->get();
         return response()->json($produtos);
     }
 
@@ -30,7 +30,7 @@ class ProdutoController extends Controller
 
     public function show($id)
     {
-        $produto = Produtos::with(['categoria', 'precos', 'grades.variacoes'])->findOrFail($id);
+        $produto = Produtos::with(['categorias', 'precos', 'grades.variacoes'])->findOrFail($id);
         return response()->json($produto);
     }
 
