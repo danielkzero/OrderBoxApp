@@ -20,7 +20,7 @@ class Users extends Authenticatable
 
     protected $hidden = [ 'password', 'remember_token' ];
 
-    public function role()
+    public function roles()
     {
         return $this->belongsTo(Roles::class, 'id', 'role_id');
     }
