@@ -23,4 +23,9 @@ class Empresas extends Model
     {
         return $this->hasMany(Empresas::class, 'empresa_id', 'id');
     }
+
+    public function usuarios()
+    {
+        return $this->hasMany(Users::class, 'empresa_id', 'id');
+    }
 }
