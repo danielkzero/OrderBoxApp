@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Role extends Model
+class Roles extends Model
 {
     use HasFactory;
 
@@ -19,6 +19,6 @@ class Role extends Model
 
     public function empresa()
     {
-        return $this->belongsTo(Empresa::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
     }
 }
