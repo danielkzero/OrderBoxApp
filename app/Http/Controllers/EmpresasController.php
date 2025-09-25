@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Empresa;
+use App\Models\Empresas;
 use Illuminate\Http\Request;
 
 class EmpresaController extends Controller
 {
     public function index()
     {
-        $empresas = Empresa::with('matriz', 'filiais')->get();
+        $empresas = Empresas::with('matriz', 'filiais')->get();
         return response()->json($empresas);
     }
 
@@ -22,18 +22,18 @@ class EmpresaController extends Controller
             'inscricao_estadual' => 'nullable|string|max:20',
         ]);
 
-        $empresa = Empresa::create($data);
+        $empresa = Empresas::create($data);
 
         return response()->json($empresa, 201);
     }
 
-    public function show(Empresa $empresa)
+    public function show(Empresas $empresa)
     {
         $empresa->load('matriz', 'filiais');
         return response()->json($empresa);
     }
 
-    public function update(Request $request, Empresa $empresa)
+    public function update(Request $request, Empresas $empresa)
     {
         $data = $request->validate([
             'empresa_id' => 'nullable|exists:empresas,id',
@@ -48,7 +48,7 @@ class EmpresaController extends Controller
         return response()->json($empresa);
     }
 
-    public function destroy(Empresa $empresa)
+    public function destroy(Empresas $empresa)
     {
         $empresa->delete(); // soft delete
         return response()->json(null, 204);

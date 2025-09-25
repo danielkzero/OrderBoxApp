@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('formas_pagamento', function (Blueprint $table) {
+        Schema::create('formas_pagamentos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->onDelete('cascade');
             $table->string('nome');
@@ -25,6 +25,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('formas_pagamento');
+        Schema::dropIfExists('formas_pagamentos');
     }
 };

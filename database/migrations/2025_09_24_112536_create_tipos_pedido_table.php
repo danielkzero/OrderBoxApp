@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('tipos_pedido', function (Blueprint $table) {
+        Schema::create('tipos_pedidos', function (Blueprint $table) {
             $table->id();
             $table->string('nome');
             $table->boolean('excluido')->default(false);
@@ -20,7 +20,7 @@ return new class extends Migration {
         });
 
         Schema::table('pedidos', function (Blueprint $table) {
-            $table->foreignId('tipo_pedido_id')->nullable()->constrained('tipos_pedido')->onDelete('set null');
+            $table->foreignId('tipo_pedido_id')->nullable()->constrained('tipos_pedidos')->onDelete('set null');
         });
     }
 
@@ -29,6 +29,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('tipos_pedido');
+        Schema::dropIfExists('tipos_pedidos');
     }
 };

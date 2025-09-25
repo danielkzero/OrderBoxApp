@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Role;
+use App\Models\Roles;
 use Illuminate\Http\Request;
 
 class RolesController extends Controller
 {
     public function index()
     {
-        $roles = Role::with('empresa')->get();
+        $roles = Roles::with('empresa')->get();
         return response()->json($roles);
     }
 
@@ -22,17 +22,17 @@ class RolesController extends Controller
             'permissoes' => 'nullable|array',
         ]);
 
-        $role = Role::create($data);
+        $role = Roles::create($data);
         return response()->json($role, 201);
     }
 
-    public function show(Role $role)
+    public function show(Roles $role)
     {
         $role->load('empresa');
         return response()->json($role);
     }
 
-    public function update(Request $request, Role $role)
+    public function update(Request $request, Roles $role)
     {
         $data = $request->validate([
             'empresa_id' => 'required|exists:empresas,id',
@@ -45,7 +45,7 @@ class RolesController extends Controller
         return response()->json($role);
     }
 
-    public function destroy(Role $role)
+    public function destroy(Roles $role)
     {
         $role->delete();
         return response()->json(null, 204);

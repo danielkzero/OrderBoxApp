@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('tabela_preco_cidades', function (Blueprint $table) {
+        Schema::create('tabelas_precos_cidades', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->onDelete('cascade');
             $table->unsignedBigInteger('tabela_preco_id');
@@ -22,7 +22,7 @@ return new class extends Migration {
             $table
                 ->foreign('tabela_preco_id')
                 ->references('id')
-                ->on('tabelas_preco')
+                ->on('tabelas_precos')
                 ->onDelete('cascade');
 
             $table
@@ -38,6 +38,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('tabela_preco_cidades');
+        Schema::dropIfExists('tabelas_precos_cidades');
     }
 };

@@ -10,10 +10,10 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('produto_precos', function (Blueprint $table) {
+        Schema::create('produtos_precos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->onDelete('cascade');
-            $table->foreignId('tabela_id')->constrained('tabelas_preco')->cascadeOnDelete();
+            $table->foreignId('tabela_id')->constrained('tabelas_precos')->cascadeOnDelete();
             $table->foreignId('produto_id')->constrained('produtos')->cascadeOnDelete();
             $table->decimal('preco', 12, 2);
             $table->boolean('excluido')->default(false);
@@ -27,6 +27,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('produtos_preco');
+        Schema::dropIfExists('produtos_precos');
     }
 };

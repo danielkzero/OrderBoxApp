@@ -10,14 +10,14 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('contato_emails', function (Blueprint $table) {
+        Schema::create('contatos_emails', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->onDelete('cascade');
             $table->unsignedBigInteger('contato_id');
             $table->string('email');
             $table->string('tipo', 1)->nullable();
 
-            $table->foreign('contato_id')->references('id')->on('cliente_contatos')->onDelete('cascade');
+            $table->foreign('contato_id')->references('id')->on('clientes_contatos')->onDelete('cascade');
         });
     }
 
@@ -26,6 +26,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('contato_emails');
+        Schema::dropIfExists('contatos_emails');
     }
 };

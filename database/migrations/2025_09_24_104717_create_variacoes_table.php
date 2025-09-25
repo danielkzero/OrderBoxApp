@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->timestamps();
         });
 
-        Schema::create('variacao_itens', function (Blueprint $table) {
+        Schema::create('variacoes_itens', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->onDelete('cascade');
             $table->foreignId('variacao_id')->constrained('variacoes')->cascadeOnDelete();

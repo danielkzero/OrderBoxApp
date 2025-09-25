@@ -17,10 +17,10 @@ return new class extends Migration {
             $table->foreign('cliente_id')->references('id')->on('clientes')->onDelete('cascade');
 
             $table->unsignedBigInteger('forma_pagamento_id')->nullable();
-            $table->foreign('forma_pagamento_id')->references('id')->on('formas_pagamento')->onDelete('set null');
+            $table->foreign('forma_pagamento_id')->references('id')->on('formas_pagamentos')->onDelete('set null');
 
             $table->unsignedBigInteger('condicao_pagamento_id')->nullable();
-            $table->foreign('condicao_pagamento_id')->references('id')->on('condicoes_pagamento')->onDelete('set null');
+            $table->foreign('condicao_pagamento_id')->references('id')->on('condicoes_pagamentos')->onDelete('set null');
 
             $table->unsignedBigInteger('transportadora_id')->nullable();  // Se houver tabela de transportadoras
             $table->string('nome_contato')->nullable();

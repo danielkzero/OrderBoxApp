@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('pedido_itens', function (Blueprint $table) {
+        Schema::create('pedidos_itens', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->onDelete('cascade');
             $table->unsignedBigInteger('pedido_id');
@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->foreign('produto_id')->references('id')->on('produtos')->onDelete('restrict');
 
             $table->unsignedBigInteger('tabela_preco_id')->nullable();
-            $table->foreign('tabela_preco_id')->references('id')->on('tabelas_preco')->onDelete('set null');
+            $table->foreign('tabela_preco_id')->references('id')->on('tabelas_precos')->onDelete('set null');
 
             $table->decimal('preco_tabela', 12, 2)->nullable();
             $table->decimal('preco_liquido', 12, 2)->nullable();
@@ -47,6 +47,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('pedido_itens');
+        Schema::dropIfExists('pedidos_itens');
     }
 };

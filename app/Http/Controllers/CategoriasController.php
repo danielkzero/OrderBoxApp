@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Categoria;
+use App\Models\Categorias;
 use Illuminate\Http\Request;
 
-class CategoriaController extends Controller
+class CategoriasController extends Controller
 {
     // Listar todas as categorias
     public function index()
     {
-        $categorias = Categoria::with('categoriaPai', 'categoriasFilhas')->get();
+        $categorias = Categorias::with('categoriaPai', 'categoriasFilhas')->get();
         return response()->json($categorias);
     }
 
@@ -23,7 +23,7 @@ class CategoriaController extends Controller
             'categoria_pai_id' => 'nullable|exists:categorias,id',
         ]);
 
-        $categoria = Categoria::create([
+        $categoria = Categorias::create([
             'empresa_id' => $request->empresa_id,
             'nome' => $request->nome,
             'categoria_pai_id' => $request->categoria_pai_id,
@@ -35,14 +35,14 @@ class CategoriaController extends Controller
     // Mostrar categoria específica
     public function show($id)
     {
-        $categoria = Categoria::with('categoriaPai', 'categoriasFilhas')->findOrFail($id);
+        $categoria = Categorias::with('categoriaPai', 'categoriasFilhas')->findOrFail($id);
         return response()->json($categoria);
     }
 
     // Atualizar categoria
     public function update(Request $request, $id)
     {
-        $categoria = Categoria::findOrFail($id);
+        $categoria = Categorias::findOrFail($id);
 
         $request->validate([
             'empresa_id' => 'sometimes|required|exists:empresas,id',
@@ -61,7 +61,7 @@ class CategoriaController extends Controller
     // Deletar categoria
     public function destroy($id)
     {
-        $categoria = Categoria::findOrFail($id);
+        $categoria = Categorias::findOrFail($id);
         $categoria->delete();
         return response()->json(['message' => 'Categoria deletada com sucesso']);
     }

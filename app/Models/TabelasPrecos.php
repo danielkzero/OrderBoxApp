@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class TabelasPreco extends Model
+class TabelasPrecos extends Model
 {
      use HasFactory;
 
@@ -16,6 +16,6 @@ class TabelasPreco extends Model
 
     public function empresa()
     {
-        return $this->belongsTo(Empresa::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
     }
 }

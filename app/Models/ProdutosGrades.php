@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ProdutoGrade extends Model
+class ProdutosGrades extends Model
 {
     use HasFactory;
 
@@ -17,16 +17,16 @@ class ProdutoGrade extends Model
 
     public function produto()
     {
-        return $this->belongsTo(Produto::class, 'id', 'produto_id');
+        return $this->belongsTo(Produtos::class, 'id', 'produto_id');
     }
 
     public function variacoes()
     {
-        return $this->hasMany(ProdutoGradeVariacao::class, 'produto_grade_id');
+        return $this->hasMany(ProdutosGradesVariacoes::class, 'produto_grade_id');
     }
 
     public function empresa_id()
     {
-        return $this->belongsTo(Empresa::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
     }
 }

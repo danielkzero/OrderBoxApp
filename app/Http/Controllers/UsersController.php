@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Models\Users;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
-class UserController extends Controller
+class UsersController extends Controller
 {
     // Listar todos os usuários
     public function index()
@@ -26,7 +26,7 @@ class UserController extends Controller
             'role_id' => 'nullable|exists:roles,id',
         ]);
 
-        $user = User::create([
+        $user = Users::create([
             'name' => $request->name,
             'email' => $request->email,
             'telefone' => $request->telefone,
@@ -40,14 +40,14 @@ class UserController extends Controller
     // Mostrar um usuário específico
     public function show($id)
     {
-        $user = User::findOrFail($id);
+        $user = Users::findOrFail($id);
         return response()->json($user);
     }
 
     // Atualizar usuário
     public function update(Request $request, $id)
     {
-        $user = User::findOrFail($id);
+        $user = Users::findOrFail($id);
 
         $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -76,7 +76,7 @@ class UserController extends Controller
     // Deletar usuário
     public function destroy($id)
     {
-        $user = User::findOrFail($id);
+        $user = Users::findOrFail($id);
         $user->delete();
         return response()->json(['message' => 'Usuário deletado com sucesso']);
     }

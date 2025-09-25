@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('cliente_contatos', function (Blueprint $table) {
+        Schema::create('clientes_contatos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->onDelete('cascade');
             $table->unsignedBigInteger('cliente_id');
@@ -28,6 +28,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('cliente_contatos');
+        Schema::dropIfExists('clientes_contatos');
     }
 };
