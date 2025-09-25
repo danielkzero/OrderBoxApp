@@ -11,7 +11,9 @@ class Categoria extends Model
 
     protected $table = 'categorias';
 
-    protected $fillable = [ 'empresa_id', 'nome', 'categoria_pai_id', 'excluido', 'ultima_alteracao' ];
+    protected $fillable = [ 
+        'empresa_id', 'nome', 'categoria_pai_id', 'excluido', 'ultima_alteracao' 
+    ];
 
     public function empresa()
     {
