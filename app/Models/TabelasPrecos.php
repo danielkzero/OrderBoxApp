@@ -8,7 +8,7 @@ class TabelasPrecos extends Model
 {
      use HasFactory;
 
-    protected $table = 'tabelas_preco';
+    protected $table = 'tabelas_precos';
 
     protected $fillable = [
         'empresa_id', 'nome', 'tipo', 'acrescimo', 'desconto', 'excluido', 'ultima_alteracao'
@@ -17,5 +17,15 @@ class TabelasPrecos extends Model
     public function empresa()
     {
         return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+    }
+
+    public function produtos()
+    {
+        return $this->hasMany(Produtos::class, 'tabela_preco_id', 'id');
+    }
+
+    public function cidades()
+    {
+        return $this->hasMany(CidadesIbge::class, 'tabela_preco_id', 'id');
     }
 }
