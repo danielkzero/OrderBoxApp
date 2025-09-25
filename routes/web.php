@@ -6,3 +6,5 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
+
+Route::resource('pedidos', App\Http\Controllers\PedidosController::class);
