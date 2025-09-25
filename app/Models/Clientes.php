@@ -30,4 +30,19 @@ class Clientes extends Model
     {
         return $this->belongsTo(MotivosBloqueios::class, 'id', 'motivo_bloqueio_id');
     }
+
+    public function contatos()
+    {
+        return $this->hasMany(ClientesContatos::class, 'cliente_id', 'id');
+    }
+
+    public function emails()
+    {
+        return $this->hasMany(ClientesEmails::class, 'cliente_id', 'id');
+    }
+
+    public function telefones()
+    {
+        return $this->hasMany(ClientesTelefones::class, 'cliente_id', 'id');
+    }
 }
