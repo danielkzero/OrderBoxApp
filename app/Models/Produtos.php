@@ -38,4 +38,9 @@ class Produtos extends Model
     {
         return $this->hasMany(ProdutosGrades::class, 'produto_id', 'id');
     }
+
+    public function imagens()
+    {
+        return $this->hasMany(ProdutosImagens::class, 'produto_id', 'id');
+    }
 }
