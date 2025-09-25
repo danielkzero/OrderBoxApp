@@ -11,32 +11,11 @@ class Produto extends Model
 
     protected $table = 'produtos';
 
-    protected $fillable = [
-        'empresa_id',
-        'categoria_id',
-        'codigo',
-        'nome',
-        'observacoes',
-        'preco_tabela',
-        'preco_minimo',
-        'ipi',
-        'tipo_ipi',
-        'comissao',
-        'saldo_estoque',
-        'st',
-        'ativo',
-        'excluido',
-        'moeda',
-        'codigo_ncm',
-        'multiplo',
-        'peso_bruto',
-        'largura',
-        'altura',
-        'comprimento',
-        'peso_dimensoes_unitario',
-        'exibir_no_b2b',
-        'unidade',
-        'ultima_alteracao',
+    protected $fillable = [ 
+        'empresa_id', 'categoria_id', 'codigo', 'nome', 'observacoes', 'preco_tabela',
+        'preco_minimo', 'ipi', 'tipo_ipi', 'comissao', 'saldo_estoque', 'st', 'ativo', 'excluido', 'moeda',
+        'codigo_ncm', 'multiplo', 'peso_bruto', 'largura', 'altura', 'comprimento', 'peso_dimensoes_unitario',
+        'exibir_no_b2b', 'unidade', 'ultima_alteracao',
     ];
 
     // Relacionamentos
