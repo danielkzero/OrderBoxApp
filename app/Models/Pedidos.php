@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Pedidos extends Model
@@ -19,6 +20,11 @@ class Pedidos extends Model
     public function empresa()
     {
         return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+    }
+
+    public function itens()
+    {
+        return $this->hasMany(PedidosItens::class, 'pedido_id', 'id');
     }
 
     public function cliente()
