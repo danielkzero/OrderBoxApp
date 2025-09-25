@@ -10,7 +10,9 @@ class Variacoes extends Model
 
     protected $table = 'variacoes';
 
-    protected $fillable = [ 'empresa_id', 'nome', 'ordem', 'excluido' ];
+    protected $fillable = [ 
+        'empresa_id', 'nome', 'ordem', 'excluido' 
+    ];
 
     public function empresa()
     {
