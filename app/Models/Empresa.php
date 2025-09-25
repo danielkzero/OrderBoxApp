@@ -10,7 +10,9 @@ class Empresa extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = [ 'empresa_id', 'nome', 'cnpj', 'inscricao_estadual', 'excluido' ];
+    protected $fillable = [ 
+        'empresa_id', 'nome', 'cnpj', 'inscricao_estadual', 'excluido' 
+    ];
 
     public function matriz()
     {
