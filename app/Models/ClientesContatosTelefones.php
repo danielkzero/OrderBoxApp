@@ -15,6 +15,8 @@ class ClientesContatosTelefones extends Model
         'empresa_id', 'cliente_contato_id', 'email', 'tipo'
     ];
 
+    public $timestamps = false;
+
     public function empresa()
     {
         return $this->belongsTo(Empresas::class, 'id', 'empresa_id');

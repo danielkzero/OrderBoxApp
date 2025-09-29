@@ -14,6 +14,8 @@ class ClientesEmails extends Model
     protected $fillable = [
         'empresa_id', 'cliente_id', 'email', 'tipo', 'ultima_alteracao'
     ];
+    
+    public $timestamps = false;
 
     public function empresa()
     {

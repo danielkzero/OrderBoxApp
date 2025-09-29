@@ -15,6 +15,8 @@ class ClientesEnderecos extends Model
         'empresa_id', 'cliente_id', 'rua', 'complemento', 'bairro', 'cep', 'municipio_codigo', 'ultima_alteracao'
     ];
 
+    public $timestamps = false;
+
     public function empresa()
     {
         return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
