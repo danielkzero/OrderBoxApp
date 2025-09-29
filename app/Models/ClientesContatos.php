@@ -15,6 +15,8 @@ class ClientesContatos extends Model
         'empresa_id', 'cliente_id', 'nome', 'cargo', 'excluido'
     ];
 
+    public $timestamps = false;
+    
     public function empresa()
     {
         return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
