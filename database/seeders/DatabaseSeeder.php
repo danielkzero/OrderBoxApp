@@ -13,11 +13,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        
+
         $this->call([
             EmpresasSeeder::class,
             RolesSeeder::class,
             UsersSeeder::class,
+            EmpresasUsersSeeder::class,
             Icms_stSeeder::class,
             ClientesSeeder::class,
             ProdutosSeeder::class,
@@ -26,6 +27,6 @@ class DatabaseSeeder extends Seeder
             TabelasPrecosSeeder::class,
             ProdutosPrecosSeeder::class,
         ]);
-        
+
     }
 }
