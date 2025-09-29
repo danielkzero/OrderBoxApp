@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6 bg-white px-4 pb-4 rounded-sm shadow">
+  <div class="space-y-6 bg-white dark:bg-gray-800 px-4 pb-4 rounded-sm shadow">
     <!-- Tabs principais -->
     <div class="border-b border-gray-200 dark:border-gray-700">
       <nav class="-mb-px flex space-x-8">
@@ -36,7 +36,7 @@
             <ButtonCustom icon="bx-plus" text="Cadastrar produto" url="/produtos/create" :outline="false" />
             <ButtonCustom icon="bx-import" text="Importar produtos" url="/produtos/import" :outline="true" />
           </div>
-          <div>
+          <div class="text-gray-800 dark:text-gray-50">
             <DataTable :columns="columns" :data="produtosNormalizados">
               <template #cell-fotos="{ row }">
                 <div v-if="row?.imagens[0]">

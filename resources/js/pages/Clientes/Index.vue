@@ -1,5 +1,5 @@
 <template>
-    <div class="space-y-6 bg-white rounded-sm shadow">
+    <div class="space-y-6 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-50 rounded-sm shadow">
         <!-- Tabs principais -->
         <div class="border-b border-gray-200 dark:border-gray-700 flex space-x-6 px-4">
             <button v-for="tab in mainTabs" :key="tab.name" @click="activeMainTab = tab.name"
