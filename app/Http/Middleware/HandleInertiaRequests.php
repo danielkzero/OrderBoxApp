@@ -47,8 +47,14 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'empresas' => function () use ($request) {
-                // Retorna todas as empresas (ou filtra pelo usuário, se desejar)
-                return Empresas::orderBy('nome')->get(['id', 'nome']);
+                if ($request->user()) {
+                    return $request->user()
+                        ->empresas()
+                        ->orderBy('empresas.nome')
+                        ->get(['empresas.id', 'empresas.nome']);
+                }
+
+                return collect(); // se não estiver logado
             },
         ];
     }
