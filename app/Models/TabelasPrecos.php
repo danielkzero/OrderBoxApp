@@ -22,7 +22,7 @@ class TabelasPrecos extends Model
 
     public function produtos()
     {
-        return $this->hasMany(Produtos::class, 'tabela_preco_id', 'id');
+        return $this->hasMany(ProdutosPrecos::class, 'tabela_id', 'id');
     }
 
     public function cidades()
