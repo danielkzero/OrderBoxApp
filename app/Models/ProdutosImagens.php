@@ -9,7 +9,7 @@ class ProdutosImagens extends Model
 {
     use HasFactory;
 
-    protected $table = 'produto_imagens';
+    protected $table = 'produtos_imagens';
 
     protected $fillable = [
         'empresa_id', 'produto_id', 'imagem_base64', 'ordem'
