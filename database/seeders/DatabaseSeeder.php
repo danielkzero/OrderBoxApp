@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             VariacoesSeeder::class,
             ProdutosImagensSeeder::class,
             TabelasPrecosSeeder::class,
+            ProdutosPrecosSeeder::class,
         ]);
         
     }

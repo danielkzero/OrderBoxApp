@@ -62,8 +62,8 @@
         </div>
 
         <!-- tabela -->
-        <div class="overflow-x-auto rounded-lg border border-indigo-200 dark:border-gray-800">
-            <table class="min-w-full text-sm">
+        <div class="overflow-x-auto rounded-lg border border-indigo-200 dark:border-gray-800 whitespace-nowrap">
+            <table class="text-sm">
                 <thead class="bg-indigo-100 dark:bg-gray-800 text-indigo-800 dark:text-indigo-100">
                     <tr>
                         <th v-for="col in allColumns" :key="col.key" class="py-2 px-4 border-b cursor-pointer"
@@ -83,7 +83,7 @@
                     <template v-for="row in paginatedData" :key="row.id">
                         <tr
                             :class="['hover:bg-indigo-200 dark:hover:bg-indigo-700 transition odd:bg-white dark:bg-gray-900 even:bg-indigo-50 dark:odd:bg-gray-900 dark:even:bg-gray-800']">
-                            <td v-for="col in allColumns" :key="col.key" class="py-1 px-2 border-b align-top">
+                            <td v-for="col in allColumns" :key="col.key" class="py-1 px-2 align-top">
                                 <!-- coluna de expander (botão) -->
                                 <template v-if="col.key === '_expander'">
                                     <button @click="toggleRow(row.id)"

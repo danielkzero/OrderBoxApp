@@ -20,7 +20,7 @@ class TabelasPrecosFactory extends Factory
 
         return [
             'empresa_id' => $empresa->id,
-            'nome' =>$this->faker->randomElement(['Interior','Capital','Interior Varejo', 'Capital Varejo', 'Interior Atacado', 'Capital Atacado']) . ' - ' .  $this->faker->word() ,
+            'nome' =>$this->faker->randomElement(['Interior','Capital','Interior Varejo', 'Capital Varejo', 'Interior Atacado', 'Capital Atacado']) . ' ' .  $this->faker->randomElement(['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']) ,
             'tipo' => $this->faker->randomElement(['P','C']), // P = Produto, C = Cliente, por exemplo
             'acrescimo' => $this->faker->optional()->randomFloat(2, 0, 50),
             'desconto' => $this->faker->optional()->randomFloat(2, 0, 50),
