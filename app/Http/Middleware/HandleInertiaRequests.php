@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Empresas;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -45,6 +46,10 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'empresas' => function () use ($request) {
+                // Retorna todas as empresas (ou filtra pelo usuário, se desejar)
+                return Empresas::orderBy('nome')->get(['id', 'nome']);
+            },
         ];
     }
 }
