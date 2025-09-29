@@ -22,6 +22,8 @@ class DatabaseSeeder extends Seeder
             ClientesSeeder::class,
             ProdutosSeeder::class,
             VariacoesSeeder::class,
+            ProdutosImagensSeeder::class,
+            TabelasPrecosSeeder::class,
         ]);
         
     }
