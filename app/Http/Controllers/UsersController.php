@@ -11,7 +11,7 @@ class UsersController extends Controller
     // Listar todos os usuários
     public function index()
     {
-        $users = User::all();
+        $users = Users::all();
         return response()->json($users);
     }
 
