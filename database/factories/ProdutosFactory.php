@@ -27,7 +27,7 @@ class ProdutosFactory extends Factory
             'preco_minimo' => $this->faker->randomFloat(2, 5, $preco_tabela),
             'ipi' => $this->faker->randomFloat(2, 0, 20),
             'tipo_ipi' => $this->faker->randomElement(['perc', 'valor']),
-            'comissao' => $this->faker->randomFloat(2, 0, 20),
+            'comissao' => 5,
             'saldo_estoque' => $this->faker->randomFloat(2, 0, 100),
             'st' => $this->faker->randomFloat(2, 0, 50),
             'ativo' => $this->faker->boolean(90),
