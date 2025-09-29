@@ -10,7 +10,7 @@ class ClientesController extends Controller
 {
     public function index()
     {
-        $clientes = Clientes::all();
+        $clientes = Clientes::with('telefones', 'emails', 'enderecos')->get();
         return Inertia::render('Clientes/Index', [
             'clientes' => $clientes
         ]);
