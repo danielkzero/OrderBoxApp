@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Produtos;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
-class ProdutoController extends Controller
+class ProdutosController extends Controller
 {
     public function index()
     {
-        $produtos = Produtos::with(['categorias', 'precos', 'grades.variacoes'])->get();
-        return response()->json($produtos);
+        $produtos = Produtos::with(['imagens','categorias', 'precos.tabelas', 'grades.variacoes'])->get();
+        return Inertia::render('Produtos/Index', [
+            'produtos' => $produtos
+        ]);
     }
 
     public function store(Request $request)
