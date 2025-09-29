@@ -42,6 +42,11 @@ class Clientes extends Model
         return $this->hasMany(ClientesEmails::class, 'cliente_id', 'id');
     }
 
+    public function enderecos()
+    {
+        return $this->hasMany(ClientesEnderecos::class, 'cliente_id', 'id');
+    }
+
     public function telefones()
     {
         return $this->hasMany(ClientesTelefones::class, 'cliente_id', 'id');
@@ -49,6 +54,6 @@ class Clientes extends Model
 
     public function campos_extras()
     {
-        return $this->hasManu(ClientesExtras::class, 'cliente_id', 'id');
+        return $this->hasMany(ClientesExtras::class, 'cliente_id', 'id');
     }
 }
