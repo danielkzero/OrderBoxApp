@@ -63,7 +63,7 @@
 
         <!-- tabela -->
         <div class="overflow-x-auto rounded-lg border border-indigo-200 dark:border-gray-800 whitespace-nowrap">
-            <table class="text-sm">
+            <table class="text-sm w-full">
                 <thead class="bg-indigo-100 dark:bg-gray-800 text-indigo-800 dark:text-indigo-100">
                     <tr>
                         <th v-for="col in allColumns" :key="col.key" class="py-2 px-4 border-b cursor-pointer"
