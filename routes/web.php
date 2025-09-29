@@ -9,3 +9,4 @@ Route::get('/', function () {
 
 Route::resource('pedidos', App\Http\Controllers\PedidosController::class);
 Route::resource('clientes', App\Http\Controllers\ClientesController::class);
+Route::resource('empresas', App\Http\Controllers\EmpresasController::class);
