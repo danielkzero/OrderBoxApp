@@ -24,9 +24,9 @@ class Produtos extends Model
         return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
     }
 
-    public function categoria()
+    public function categorias()
     {
-        return $this->belongsTo(Categorias::class, 'id', 'categoria_id');
+        return $this->belongsTo(Categorias::class, 'categoria_id', 'id');
     }
 
     public function precos()
