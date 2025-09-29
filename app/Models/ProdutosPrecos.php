@@ -9,7 +9,7 @@ class ProdutosPrecos extends Model
 {
     use HasFactory;
 
-    protected $table = 'produto_precos';
+    protected $table = 'produtos_precos';
 
     protected $fillable = [
         'empresa_id', 'tabela_id', 'produto_id', 'preco', 'excluido', 'ultima_alteracao',
@@ -20,9 +20,9 @@ class ProdutosPrecos extends Model
         return $this->belongsTo(Produtos::class, 'id', 'produto_id');
     }
 
-    public function tabela()
+    public function tabelas()
     {
-        return $this->belongsTo(TabelasPrecos::class, 'id', 'tabela_id');
+        return $this->belongsTo(TabelasPrecos::class, 'tabela_id', 'id');
     }
 
     public function empresa()
