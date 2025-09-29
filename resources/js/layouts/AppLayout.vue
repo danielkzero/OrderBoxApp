@@ -11,9 +11,8 @@
                 <i class="bx bxs-package text-3xl text-indigo-600"></i>
                 <!-- Seletor de empresa -->
                 <div v-if="!sidebarCollapsed">
-                    <FormField tag="select" v-model="empresa" classField="truncate ms-2" :removeClass="true" class="text-gray-700">
-                        <option value="hydradigital">Hydra Digital</option>
-                        <option value="orderbox">Order Box</option>
+                    <FormField tag="select" v-model="empresa" classField="truncate w-42 ms-2" :removeClass="true" class="text-gray-700">
+                        <option :value="empresa.id" v-for="empresa in empresas" :key="empresa.id">{{ empresa.nome }}</option>
                     </FormField>
                 </div>
             </div>
@@ -49,7 +48,7 @@
                 </button>
 
                 <!-- Menus esquerda -->
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-4 ms-auto me-4">
                     <button
                         class="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-200 hover:text-indigo-600 cursor-pointer hover:scale-110 transition-all">
                         <i class="bx bxs-diamond text-lg"></i>
@@ -97,7 +96,7 @@
             </header>
 
             <!-- Content -->
-            <main class="flex-1 overflow-y-auto p-4">
+            <main class="flex-1 overflow-y-auto p-4">                
                 <slot />
             </main>
         </div>
@@ -109,6 +108,11 @@ import { ref } from "vue";
 import { Link } from "@inertiajs/vue3";
 import SidebarLink from "@/components/SidebarLink.vue";
 import FormField from "@/components/FormField.vue";
+import { usePage } from "@inertiajs/vue3";
+
+const page = usePage();
+
+const empresas = page.props.empresas;
 
 const sidebarCollapsed = ref(false); // slim mode padrão
 const mobileOpen = ref(false);
