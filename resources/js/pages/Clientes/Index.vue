@@ -32,16 +32,16 @@
 
                 <!-- Lista -->
                 <div v-for="cliente in clientes" :key="cliente.id" class="border-b border-gray-200 pb-3 pt-3">
-                    <div class="font-semibold text-indigo-600">{{ cliente.nome }}</div>
+                    <div class="font-semibold text-indigo-600">{{ cliente.razao_social }}</div>
                     <div class="text-sm text-gray-600">{{ cliente.cnpj }}</div>
-                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-600">
-                        <i class="bx bx-phone"></i> <span>{{ cliente.telefone }}</span>
+                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-600" v-for="telefone in cliente.telefones" :key="telefone.id">
+                        <i class="bx bx-phone"></i> <span>{{ telefone.numero }}</span>
                     </div>
-                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-600">
-                        <i class="bx bx-envelope"></i> <span>{{ cliente.email }}</span>
+                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-600" v-for="email in cliente.emails" :key="email.id">
+                        <i class="bx bx-envelope"></i> <span>{{ email.email }}</span>
                     </div>
-                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-600">
-                        <i class="bx bx-map"></i> <span>{{ cliente.cidade }}</span>
+                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-600" v-for="endereco in cliente.enderecos" :key="endereco.id">
+                        <i class="bx bx-map"></i> <span>{{ endereco.rua }}</span>
                     </div>
                     <div class="mt-2 space-x-2">
                         <button class="px-3 py-1 text-sm border rounded text-indigo-600 border-indigo-400">
@@ -105,19 +105,17 @@ import AppLayout from "@/layouts/AppLayout.vue";
 import ButtonCustom from "@/components/ButtonCustom.vue";
 import DataTable from "@/components/DataTable.vue";
 import FormField from "@/components/FormField.vue";
+import { usePage } from "@inertiajs/vue3";
 
 defineOptions({
     layout: AppLayout,
 });
 
+const page = usePage();
 
 const search = ref("");
 
-const clientes = ref([
-    { id: 1, nome: "+BARATO - Marcos Mateus Sales", cnpj: "24.837.821/0001-45", telefone: "(21) 96462-3025", email: "marcosmateussales1@gmail.com", cidade: "RIO DE JANEIRO" },
-    { id: 2, nome: "+MAIS ATACADISTA - Boecker e Sfalcin", cnpj: "24.564.861/0001-60", telefone: "(27) 99946-2980", email: "ucleber.compras@maisatacadista.com", cidade: "COLATINA" },
-    { id: 3, nome: "Município de Uruguaiana", cnpj: "88.131.164/0001-07", telefone: "(55) 3911-3023", email: "", cidade: "URUGUAIANA" },
-]);
+const clientes = page.props.clientes;
 
 // Tabs
 const mainTabs = [
