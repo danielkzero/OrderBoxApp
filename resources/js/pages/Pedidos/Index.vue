@@ -107,10 +107,14 @@ import { ref } from "vue";
 import ButtonCustom from "@/components/ButtonCustom.vue";
 import DataTable from "@/components/DataTable.vue";
 import FormField from "@/components/FormField.vue";
+import { usePage } from "@inertiajs/vue3";
 
+const page = usePage();
 defineOptions({
   layout: AppLayout,
 });
+
+const empresas = page.props.empresas;
 
 // Tabs principais com ícones
 const mainTabs = [
