@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Cliente;
+use App\Models\Clientes;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -13,12 +13,12 @@ class ClientesFactory extends Factory
     public function definition(): array
     {
         return [
-            'empresa_id' => $this->faker->numberBetween(1, 10),
+            'empresa_id' => \App\Models\Empresas::inRandomOrder()->first()->id ?? \App\Models\Empresas::factory()->create()->id,
             'icms_st_id' => $this->faker->numberBetween(1, 5),
             'tipo' => 'J', // Apenas Jurídico por padrão
             'razao_social' => $this->faker->company,
             'nome_fantasia' => $this->faker->companySuffix,
-            'cnpj' => $this->faker->cnpj(false),
+            'cnpj' => $this->faker->numerify('##.###.###/####-##'),
             'inscricao_estadual' => $this->faker->numerify('#########'),
             'suframa' => null,
             'rua' => $this->faker->streetName,
