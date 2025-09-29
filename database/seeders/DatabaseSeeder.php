@@ -23,7 +23,6 @@ class DatabaseSeeder extends Seeder
             ProdutosSeeder::class,
             VariacoesSeeder::class,
         ]);
-
         
     }
 }
