@@ -88,9 +88,9 @@
                             <Link href="/meus-dados"
                                 class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                             Meus Dados</Link>
-                            <Link href="/logout"
-                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Sair</Link>
+                            <button @click="logout"
+                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">
+                            Sair</button>
                         </div>
                     </div>
                 </div>
@@ -113,7 +113,7 @@ import { onMounted, ref, watch } from "vue";
 import { Link } from "@inertiajs/vue3";
 import SidebarLink from "@/components/SidebarLink.vue";
 import FormField from "@/components/FormField.vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, router } from "@inertiajs/vue3";
 
 const page = usePage();
 const empresas = ref(page.props.empresas || []);
@@ -144,4 +144,7 @@ watch(empresa, (novaEmpresa) => {
     }
 });
 
+function logout() {
+    router.post('/logout');
+}
 </script>
