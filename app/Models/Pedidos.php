@@ -29,7 +29,7 @@ class Pedidos extends Model
 
     public function cliente()
     {
-        return $this->belongsTo(Clientes::class, 'id', 'cliente_id');
+        return $this->belongsTo(Clientes::class, 'cliente_id', 'id');
     }
 
     public function forma_pagamento()
@@ -49,7 +49,7 @@ class Pedidos extends Model
 
     public function usuario()
     {
-        return $this->belongsTo(Users::class, 'id', 'criador_id');
+        return $this->belongsTo(Users::class, 'criador_id', 'id');
     }
 
     public function tipo_pedido()
