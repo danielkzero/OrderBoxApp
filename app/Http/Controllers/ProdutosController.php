@@ -5,14 +5,38 @@ namespace App\Http\Controllers;
 use App\Models\Produtos;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+
 
 class ProdutosController extends Controller
 {
-    public function index()
+    public function index($empresa)
     {
-        $produtos = Produtos::with(['imagens','categorias', 'precos.tabelas', 'grades.variacoes'])->get();
+        $user = Auth::user();
+
+        if (!$user) {
+            abort(403, 'Usuário não logado.');
+        }
+
+        // Pega os IDs das empresas que o usuário tem acesso
+        $empresaIds = $user->empresas()->pluck('empresas.id')->toArray();
+
+        if (!in_array($empresa, $empresaIds)) {
+            abort(403, 'Empresa inválida.');
+        }
+
+        $produtos = Produtos::with([
+            'imagens',
+            'categorias',
+            'precos.tabelas',
+            'grades.variacoes'
+        ])
+            ->where('empresa_id', $empresa)
+            ->get();
+
         return Inertia::render('Produtos/Index', [
-            'produtos' => $produtos
+            'produtos' => $produtos,
+            'empresa_selecionada' => $empresa
         ]);
     }
 
@@ -33,7 +57,13 @@ class ProdutosController extends Controller
 
     public function show($id)
     {
-        $produto = Produtos::with(['categorias', 'precos', 'grades.variacoes'])->findOrFail($id);
+        $produto = Produtos::with([
+            'categorias',
+            'precos',
+            'grades.variacoes'
+        ])
+            ->findOrFail($id);
+
         return response()->json($produto);
     }
 
