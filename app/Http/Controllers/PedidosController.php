@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Pedidos;
 use App\Models\Empresas;
+use App\Models\Pedidos;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class PedidosController extends Controller
 {
@@ -28,7 +28,12 @@ class PedidosController extends Controller
         // Pega os pedidos apenas dessas empresas
         $pedidos = Pedidos::with(['itens', 'cliente', 'usuario'])
             ->where('empresa_id', $empresa)
-            ->get();
+            ->get()
+            ->map(function ($pedido) {
+                // soma os subtotais dos itens desse pedido
+                $pedido->total = $pedido->itens->sum('subtotal');
+                return $pedido;
+            });
 
         return Inertia::render('Pedidos/Index', [
             'pedidos' => $pedidos,
