@@ -42,6 +42,11 @@ class Pedidos extends Model
         return $this->belongsTo(CondicoesPagamentos::class, 'id', 'condicao_pagamento_id');
     }
 
+    public function extras()
+    {
+        return $this->hasMany(PedidosExtras::class, 'pedido_id', 'id');
+    }
+
     public function usuario()
     {
         return $this->belongsTo(Users::class, 'id', 'criador_id');
