@@ -12,16 +12,17 @@ class EmpresasUsers extends Model
     protected $table = 'empresas_users';
 
     protected $fillable = [
-        'user_id', 'empresa_id'
+        'user_id',
+        'empresa_id'
     ];
 
     public function empresa()
     {
-        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'empresa_id', 'id');
     }
 
     public function usuario()
     {
-        return $this->belongsTo(Users::class, 'id', 'user_id');
+        return $this->belongsTo(Users::class, 'user_id', 'id');
     }
 }
