@@ -22,21 +22,21 @@
             </div>
             <!-- Navegação -->
             <nav class="px-3 py-4 space-y-2 overflow-auto dark:text-gray-50">
-                <SidebarLink :href="`/${emp}/`" icon="bx bx-home" label="Dashboard" :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`/${emp}/pedidos`" icon="bx bx-cart" label="Pedidos"
+                <SidebarLink :href="`/${empresa}/dashboard`" icon="bx bx-home" label="Dashboard" :collapsed="sidebarCollapsed" />
+                <SidebarLink :href="`/${empresa}/pedidos`" icon="bx bx-cart" label="Pedidos"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`/${emp}/clientes`" icon="bx bx-user" label="Clientes"
+                <SidebarLink :href="`/${empresa}/clientes`" icon="bx bx-user" label="Clientes"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`/${emp}/produtos`" icon="bx bx-box" label="Produtos"
+                <SidebarLink :href="`/${empresa}/produtos`" icon="bx bx-box" label="Produtos"
                     :collapsed="sidebarCollapsed" />
             </nav>
 
             <!-- Rodapé do menu fixo no fundo -->
             <div
                 class="absolute bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-2">
-                <SidebarLink :href="`/${emp}/b2b`" icon="bx bx-store" label="E-commerce B2B"
+                <SidebarLink :href="`/${empresa}/b2b`" icon="bx bx-store" label="E-commerce B2B"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`/${emp}/conta`" icon="bx bx-cog" label="Minha Conta"
+                <SidebarLink :href="`/${empresa}/conta`" icon="bx bx-cog" label="Minha Conta"
                     :collapsed="sidebarCollapsed" />
             </div>
         </aside>
@@ -117,8 +117,11 @@ import { usePage } from "@inertiajs/vue3";
 
 const page = usePage();
 const empresas = ref(page.props.empresas || []);
-const empresa = ref(localStorage.getItem('empresa') || page.props.empresa_selecionada || null);
-const emp = ref(null);
+
+const urlParts = window.location.pathname.split('/').filter(Boolean);
+const empresaIdDaUrl = Number(urlParts[0]) || (empresas.value[0]?.id || null);
+
+const empresa = ref(empresaIdDaUrl || null);
 
 const sidebarCollapsed = ref(false); // slim mode padrão
 const mobileOpen = ref(false);
@@ -136,14 +139,9 @@ function toogleCollapsed(valor) {
 
 watch(empresa, (novaEmpresa) => {
     if (novaEmpresa) {
-        localStorage.setItem('empresa', novaEmpresa);
-        emp.value = novaEmpresa;
+        empresa.value = novaEmpresa;
         window.location.href = `/${novaEmpresa}/pedidos`;
     }
-});
-
-onMounted(() => {
-    emp.value = localStorage.getItem('empresa');;
 });
 
 </script>
