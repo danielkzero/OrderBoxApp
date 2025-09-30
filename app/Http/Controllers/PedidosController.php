@@ -26,12 +26,13 @@ class PedidosController extends Controller
         }
 
         // Pega os pedidos apenas dessas empresas
-        $pedidos = Pedidos::with(['itens'])
-            ->whereIn('empresa_id', $empresa)
+        $pedidos = Pedidos::with(['itens', 'cliente', 'usuario'])
+            ->where('empresa_id', $empresa)
             ->get();
 
         return Inertia::render('Pedidos/Index', [
             'pedidos' => $pedidos,
+            'empresa_id' => $empresa
         ]);
     }
 }
