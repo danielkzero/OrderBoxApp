@@ -14,6 +14,8 @@ class TabelasPrecosCidades extends Model
     protected $fillable = [
         'empresa_id', 'tabela_preco_id', 'municipio_codigo'
     ];
+    
+    public $timestamps = false;
 
     public function empresa()
     {
