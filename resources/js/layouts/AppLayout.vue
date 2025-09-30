@@ -22,17 +22,22 @@
             </div>
             <!-- Navegação -->
             <nav class="px-3 py-4 space-y-2 overflow-auto dark:text-gray-50">
-                <SidebarLink href="/" icon="bx bx-home" label="Dashboard" :collapsed="sidebarCollapsed" />
-                <SidebarLink href="/pedidos" icon="bx bx-cart" label="Pedidos" :collapsed="sidebarCollapsed" />
-                <SidebarLink href="/clientes" icon="bx bx-user" label="Clientes" :collapsed="sidebarCollapsed" />
-                <SidebarLink href="/produtos" icon="bx bx-box" label="Produtos" :collapsed="sidebarCollapsed" />
+                <SidebarLink :href="`/${emp}/`" icon="bx bx-home" label="Dashboard" :collapsed="sidebarCollapsed" />
+                <SidebarLink :href="`/${emp}/pedidos`" icon="bx bx-cart" label="Pedidos"
+                    :collapsed="sidebarCollapsed" />
+                <SidebarLink :href="`/${emp}/clientes`" icon="bx bx-user" label="Clientes"
+                    :collapsed="sidebarCollapsed" />
+                <SidebarLink :href="`/${emp}/produtos`" icon="bx bx-box" label="Produtos"
+                    :collapsed="sidebarCollapsed" />
             </nav>
 
             <!-- Rodapé do menu fixo no fundo -->
             <div
                 class="absolute bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-2">
-                <SidebarLink href="/b2b" icon="bx bx-store" label="E-commerce B2B" :collapsed="sidebarCollapsed" />
-                <SidebarLink href="/conta" icon="bx bx-cog" label="Minha Conta" :collapsed="sidebarCollapsed" />
+                <SidebarLink :href="`/${emp}/b2b`" icon="bx bx-store" label="E-commerce B2B"
+                    :collapsed="sidebarCollapsed" />
+                <SidebarLink :href="`/${emp}/conta`" icon="bx bx-cog" label="Minha Conta"
+                    :collapsed="sidebarCollapsed" />
             </div>
         </aside>
 
@@ -104,18 +109,16 @@
 
 
 <script setup>
-import { ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { Link } from "@inertiajs/vue3";
 import SidebarLink from "@/components/SidebarLink.vue";
 import FormField from "@/components/FormField.vue";
 import { usePage } from "@inertiajs/vue3";
 
-
 const page = usePage();
-const user = page.props.auth;
-const empresas = page.props.empresas;
-const empresa = ref(empresas[0]?.id || null);
-
+const empresas = ref(page.props.empresas || []);
+const empresa = ref(localStorage.getItem('empresa') || page.props.empresa_selecionada || null);
+const emp = ref(null);
 
 const sidebarCollapsed = ref(false); // slim mode padrão
 const mobileOpen = ref(false);
@@ -130,4 +133,17 @@ function toogleCollapsed(valor) {
         sidebarCollapsed.value = false;
     }
 }
+
+watch(empresa, (novaEmpresa) => {
+    if (novaEmpresa) {
+        localStorage.setItem('empresa', novaEmpresa);
+        emp.value = novaEmpresa;
+        window.location.href = `/${novaEmpresa}`;
+    }
+});
+
+onMounted(() => {
+    emp.value = localStorage.getItem('empresa');;
+});
+
 </script>
