@@ -3,7 +3,8 @@
         <!-- Tabs principais -->
         <div class="border-b border-gray-200 dark:border-gray-700 flex space-x-6 px-4">
             <button v-for="tab in mainTabs" :key="tab.name" @click="activeMainTab = tab.name"
-                class="flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm" :class="activeMainTab === tab.name
+                class="flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm"
+                :class="activeMainTab === tab.name
                     ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'">
                 <i :class="tab.icon + ' text-lg'"></i>
@@ -15,7 +16,6 @@
         <div v-if="activeMainTab === 'Clientes'" class="p-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Lista de clientes -->
             <div class="lg:col-span-2 space-y-4">
-                <!-- Header -->
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-2">
                         <button class="px-3 py-1 text-sm bg-indigo-50 border border-indigo-200 rounded text-indigo-600">
@@ -34,15 +34,17 @@
                 <div v-for="cliente in clientes" :key="cliente.id" class="border-b border-gray-200 pb-3 pt-3">
                     <div class="font-semibold text-indigo-600">{{ cliente.razao_social }}</div>
                     <div class="text-sm text-gray-600">{{ cliente.cnpj }}</div>
-                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-600" v-for="telefone in cliente.telefones" :key="telefone.id">
+
+                    <div v-for="telefone in cliente.telefones" :key="telefone.id" class="flex items-center space-x-2 mt-1 text-sm text-gray-600">
                         <i class="bx bx-phone"></i> <span>{{ telefone.numero }}</span>
                     </div>
-                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-600" v-for="email in cliente.emails" :key="email.id">
+                    <div v-for="email in cliente.emails" :key="email.id" class="flex items-center space-x-2 mt-1 text-sm text-gray-600">
                         <i class="bx bx-envelope"></i> <span>{{ email.email }}</span>
                     </div>
-                    <div class="flex items-center space-x-2 mt-1 text-sm text-gray-600" v-for="endereco in cliente.enderecos" :key="endereco.id">
+                    <div v-for="endereco in cliente.enderecos" :key="endereco.id" class="flex items-center space-x-2 mt-1 text-sm text-gray-600">
                         <i class="bx bx-map"></i> <span>{{ endereco.rua }}</span>
                     </div>
+
                     <div class="mt-2 space-x-2">
                         <button class="px-3 py-1 text-sm border rounded text-indigo-600 border-indigo-400">
                             <i class="bx bx-edit"></i> Alterar
@@ -60,15 +62,17 @@
                     <h3 class="text-sm font-semibold text-gray-700">CARTEIRA DE CLIENTES</h3>
                     <span class="text-xs text-gray-500">SETEMBRO DE 2025</span>
                 </div>
+
                 <apexchart type="pie" height="220" :options="chartOptions" :series="series"></apexchart>
+
                 <div class="text-xs text-gray-600 space-y-1 mt-2">
-                    <div><span class="text-green-500">●</span> 0 ativos</div>
-                    <div><span class="text-yellow-500">●</span> 1 inativos recentes</div>
-                    <div><span class="text-red-500">●</span> 0 inativos antigos</div>
-                    <div><span class="text-gray-400">●</span> 43827 prospects</div>
+                    <div><span class="text-green-500">●</span> {{ counts.ativos }} ativos</div>
+                    <div><span class="text-yellow-500">●</span> {{ counts.inativos_recentes }} inativos recentes</div>
+                    <div><span class="text-red-500">●</span> {{ counts.inativos_antigos }} inativos antigos</div>
+                    <div><span class="text-gray-400">●</span> {{ counts.prospects }} prospectados</div>
                 </div>
-                <button
-                    class="mt-3 px-3 py-1 w-full text-sm bg-indigo-50 text-indigo-600 rounded border border-indigo-200">
+
+                <button class="mt-3 px-3 py-1 w-full text-sm bg-indigo-50 text-indigo-600 rounded border border-indigo-200">
                     <i class="bx bx-bar-chart-alt-2"></i> Detalhar carteira
                 </button>
             </div>
@@ -76,10 +80,10 @@
 
         <!-- Conteúdo Configurações -->
         <div v-else class="p-4">
-            <!-- Sub-tabs -->
             <div class="border-b border-gray-50 flex space-x-4">
                 <button v-for="sub in configTabs" :key="sub.name" @click="activeConfigTab = sub.name"
-                    class="flex items-center space-x-1 py-2 px-2 text-sm font-medium" :class="activeConfigTab === sub.name
+                    class="flex items-center space-x-1 py-2 px-2 text-sm font-medium"
+                    :class="activeConfigTab === sub.name
                         ? 'text-indigo-600 border-b-2 border-indigo-600'
                         : 'text-gray-500 hover:text-gray-700 border-b-2 border-transparent'">
                     <i :class="sub.icon"></i>
@@ -87,7 +91,6 @@
                 </button>
             </div>
 
-            <!-- Conteúdo -->
             <div class="mt-6 text-center text-gray-500">
                 <p>Nenhum {{ activeConfigTab.toLowerCase() }} configurado.</p>
                 <button class="mt-3 px-4 py-2 bg-indigo-600 text-white text-sm rounded">
@@ -102,9 +105,6 @@
 import { ref } from "vue";
 import ApexChart from "vue3-apexcharts";
 import AppLayout from "@/layouts/AppLayout.vue";
-import ButtonCustom from "@/components/ButtonCustom.vue";
-import DataTable from "@/components/DataTable.vue";
-import FormField from "@/components/FormField.vue";
 import { usePage } from "@inertiajs/vue3";
 
 defineOptions({
@@ -115,7 +115,12 @@ const page = usePage();
 
 const search = ref("");
 
+// Clientes
 const clientes = page.props.clientes;
+
+// Dados do gráfico
+const series = page.props.chartData.series;
+const counts = page.props.chartData.counts;
 
 // Tabs
 const mainTabs = [
@@ -136,8 +141,7 @@ const configTabs = [
 ];
 const activeConfigTab = ref("Campos extras");
 
-// Gráfico
-const series = [0, 1, 0, 43827];
+// Opções do gráfico
 const chartOptions = {
     labels: ["Ativos", "Inativos recentes", "Inativos antigos", "Prospects"],
     colors: ["#22c55e", "#eab308", "#ef4444", "#9ca3af"],
