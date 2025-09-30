@@ -138,7 +138,7 @@ watch(empresa, (novaEmpresa) => {
     if (novaEmpresa) {
         localStorage.setItem('empresa', novaEmpresa);
         emp.value = novaEmpresa;
-        window.location.href = `/${novaEmpresa}`;
+        window.location.href = `/${novaEmpresa}/pedidos`;
     }
 });
 
