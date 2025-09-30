@@ -44,8 +44,8 @@ class ClientesExtrasFactory extends Factory
         }
 
         return [
-            'empresa_id' => Empresas::factory(),
-            'cliente_id' => Clientes::factory(),
+            'empresa_id' => \App\Models\Empresas::inRandomOrder()->first()->id ?? \App\Models\Empresas::factory()->create()->id,
+            'cliente_id' => \App\Models\Clientes::inRandomOrder()->first()->id ?? \App\Models\Clientes::factory()->create()->id,
             'campo_extra_id' => $this->faker->numberBetween(1, 50),
             'nome' => $this->faker->word(),
             'tipo' => $tipo,
