@@ -50,7 +50,8 @@ class HandleInertiaRequests extends Middleware
                 if ($request->user()) {
                     return $request->user()
                         ->empresas()
-                        ->orderBy('empresas.nome')
+                        ->orderBy('empresas.id')
+                        ->distinct('empresas.id')
                         ->get(['empresas.id', 'empresas.nome']);
                 }
 
