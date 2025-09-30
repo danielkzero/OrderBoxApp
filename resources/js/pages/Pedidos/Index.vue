@@ -57,9 +57,12 @@
       </div>
       <div class="mt-4">
         <DataTable :columns="columns" :data="pedidos">
-          <template #cell-valor="{ row }">
-            <span>
-              {{ formatCurrency(total(row)) }}
+          <template #cell-total="{ row }">
+            {{ formatCurrency(row.total) }}
+          </template>
+          <template #cell-status="{ row }">
+            <span :class="statusMap[row.status].class">
+              {{ statusMap[row.status].label }}
             </span>
           </template>
         </DataTable>
@@ -122,13 +125,18 @@ defineOptions({
 
 const page = usePage();
 const pedidos = ref(page.props.pedidos);
-const empresa = ref(page.props.empresa);
+
+const statusMap = {
+  aprovado: { label: "Aprovado", class: "bg-green-200 text-green-800 px-2 py-1 rounded" },
+  pendente: { label: "Pendente", class: "bg-yellow-200 text-yellow-800 px-2 py-1 rounded" },
+  cancelado: { label: "Cancelado", class: "bg-red-200 text-red-800 px-2 py-1 rounded" },
+};
 
 const columns = [
   { label: "Pedido", key: "id" },
   { label: "Cliente", key: "cliente.razao_social" },
   { label: "Emitido por", key: "usuario.name" },
-  { label: "Valor", key: "valor" },
+  { label: "Valor", key: "total" },
   { label: "Status", key: "status" },
 ];
 
