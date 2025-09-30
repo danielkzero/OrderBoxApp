@@ -56,4 +56,9 @@ class Clientes extends Model
     {
         return $this->hasMany(ClientesExtras::class, 'cliente_id', 'id');
     }
+
+    public function pedidos()
+    {
+        return $this->hasMany(Pedidos::class, 'cliente_id', 'id');
+    }
 }
