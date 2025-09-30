@@ -56,7 +56,13 @@
         </FormField>
       </div>
       <div class="mt-4">
-        <DataTable />
+        <DataTable :columns="columns" :data="pedidos">
+          <template #cell-valor="{ row }">
+            <span>
+              {{ formatCurrency(total(row)) }}
+            </span>
+          </template>
+        </DataTable>
       </div>
     </div>
 
@@ -108,13 +114,23 @@ import ButtonCustom from "@/components/ButtonCustom.vue";
 import DataTable from "@/components/DataTable.vue";
 import FormField from "@/components/FormField.vue";
 import { usePage } from "@inertiajs/vue3";
+import { formatCurrency } from "@/lib/utils";
 
-const page = usePage();
 defineOptions({
   layout: AppLayout,
 });
 
-const empresas = page.props.empresas;
+const page = usePage();
+const pedidos = ref(page.props.pedidos);
+const empresa = ref(page.props.empresa);
+
+const columns = [
+  { label: "Pedido", key: "id" },
+  { label: "Cliente", key: "cliente.razao_social" },
+  { label: "Emitido por", key: "usuario.name" },
+  { label: "Valor", key: "valor" },
+  { label: "Status", key: "status" },
+];
 
 // Tabs principais com ícones
 const mainTabs = [
@@ -139,4 +155,9 @@ const filtros = ref({
   envio: "ignorar",
   status: "qualquer",
 });
+
+function total(row) {
+  return row.itens.reduce((acc, item) => acc + (item.subtotal * 1), 0);
+}
+
 </script>
