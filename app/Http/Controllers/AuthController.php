@@ -22,7 +22,15 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
-            return redirect()->intended('/');
+            $user = Auth::user();
+
+            $empresaIds = $user->empresas()->pluck('empresas.id')->toArray();
+
+            if (!$empresaIds) {
+                abort(403, 'Empresa inválida.');
+            }
+
+            return redirect()->intended('/' . $empresaIds[0] .'/pedidos');
         }
 
         return back()->withErrors([
