@@ -26,7 +26,7 @@ class ClientesFactory extends Factory
             'complemento' => $this->faker->secondaryAddress,
             'bairro' => $this->faker->citySuffix,
             'cep' => $this->faker->postcode,
-            'municipio_codigo' => null, // Pode preencher se quiser gerar IBGE válido
+            'municipio_codigo' => \App\Models\CidadesIbge::inRandomOrder()->first()->municipio_codigo ?? \App\Models\CidadesIbge::factory()->create()->municipio_codigo, 
             'bloqueado' => 0,
             'motivo_bloqueio_id' => null,
             'observacao' => $this->faker->sentence,
