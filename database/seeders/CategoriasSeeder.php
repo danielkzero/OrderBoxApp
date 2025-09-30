@@ -13,11 +13,11 @@ class CategoriasSeeder extends Seeder
      */
     public function run(): void
     {
-        $categirias = Categorias::factory()
-            ->count(10)
+        $categoria = Categorias::factory()
+            ->count(20)
             ->create();
 
-        $categirias->each(function ($categirias) {
+        $categoria->each(function ($categoria) {
             Categorias::factory()
                 ->count(rand(1, 3))
                 ->create([
