@@ -12,6 +12,6 @@ class FormasPagamentosSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\FormasPagamentos::factory()->count(20)->create();
+        \App\Models\FormasPagamentos::factory()->count(200)->create();
     }
 }
