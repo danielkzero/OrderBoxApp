@@ -12,6 +12,6 @@ class CondicoesPagamentosSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\CondicoesPagamentos::factory()->count(20)->create();
+        \App\Models\CondicoesPagamentos::factory()->count(200)->create();
     }
 }
