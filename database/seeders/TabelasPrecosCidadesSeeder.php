@@ -12,6 +12,6 @@ class TabelasPrecosCidadesSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\TabelasPrecosCidades::factory(100)->create();
+        \App\Models\TabelasPrecosCidades::factory(500)->create();
     }
 }
