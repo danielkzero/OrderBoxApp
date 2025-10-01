@@ -23,7 +23,7 @@ class PedidosItens extends Model
 
     public function pedido()
     {
-        return $this->belongsTo(Pedidos::class, 'id', 'pedido_id');
+        return $this->belongsTo(Pedidos::class, 'pedido_id', 'id');
     }
 
     public function produto()
