@@ -140,7 +140,7 @@ function toogleCollapsed(valor) {
 watch(empresa, (novaEmpresa) => {
     if (novaEmpresa) {
         empresa.value = novaEmpresa;
-        window.location.href = `/${novaEmpresa}/pedidos`;
+        window.location.href = `/${novaEmpresa}/dashboard`;
     }
 });
 
