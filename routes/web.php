@@ -18,4 +18,5 @@ Route::middleware('auth')->group(function () {
     Route::resource('{empresa}/pedidos', App\Http\Controllers\PedidosController::class)->where(['empresa' => '[0-9]+']);
     Route::resource('{empresa}/clientes', App\Http\Controllers\ClientesController::class)->where(['empresa' => '[0-9]+']);
     Route::resource('{empresa}/produtos', App\Http\Controllers\ProdutosController::class)->where(['empresa' => '[0-9]+']);
+    Route::resource('{empresa}/dashboard', App\Http\Controllers\DashboardController::class)->where(['empresa' => '[0-9]+']);
 });
