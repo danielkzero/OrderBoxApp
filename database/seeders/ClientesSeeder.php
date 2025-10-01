@@ -14,7 +14,7 @@ class ClientesSeeder extends Seeder
     public function run(): void
     {
         \App\Models\Clientes::factory()
-            ->count(50) // 50 clientes
+            ->count(500) // 50 clientes
             ->create()
             ->each(function ($cliente) {
                 // telefones
