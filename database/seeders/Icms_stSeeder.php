@@ -10,6 +10,6 @@ class Icms_stSeeder extends Seeder
     public function run(): void
     {
         // Cria 20 regras de ICMS-ST distribuídas entre as empresas existentes
-        Icms_st::factory()->count(20)->create();
+        Icms_st::factory()->count(200)->create();
     }
 }
