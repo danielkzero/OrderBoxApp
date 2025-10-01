@@ -55,7 +55,7 @@
           <button
             type="submit"
             class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium 
-                   flex items-center justify-center space-x-2 transition-colors"
+                   flex items-center justify-center space-x-2 transition-colors cursor-pointer"
             :disabled="form.processing"
           >
             <i class="bx bx-log-in"></i>
