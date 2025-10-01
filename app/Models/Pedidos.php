@@ -17,6 +17,10 @@ class Pedidos extends Model
         'criador_id', 'observacoes', 'tipo_pedido_id'
     ];
 
+    protected $casts = [
+        'data_emissao' => 'datetime',
+    ];
+
     public function empresa()
     {
         return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
@@ -57,4 +61,3 @@ class Pedidos extends Model
         return $this->belongsTo(TiposPedidos::class, 'id', 'tipo_pedido_id');
     }
 }
-
