@@ -13,7 +13,7 @@ class PedidosSeeder extends Seeder
     public function run(): void
     {
         \App\Models\Pedidos::factory()
-            ->count(30) // cria 20 pedidos
+            ->count(3000) // cria 20 pedidos
             ->create()
             ->each(function ($pedido) {
                 // Itens do pedido
