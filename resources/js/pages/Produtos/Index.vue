@@ -20,7 +20,8 @@
             <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
                 <nav class="flex space-x-2">
                     <button v-for="sub in produtosTabs" :key="sub.name" @click="activeProdutosTab = sub.name"
-                        class="flex items-center space-x-2 px-3 py-1 text-sm font-medium" :class="activeProdutosTab === sub.name
+                        class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
+                        :class="activeProdutosTab === sub.name
                             ? 'text-indigo-700 dark:text-white border-b-2'
                             : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'">
                         <i :class="sub.icon + ' text-base'"></i>
@@ -42,7 +43,7 @@
                             <template #cell-fotos="{ row }">
                                 <div v-if="row?.imagens[0]">
                                     <img :src="row.imagens[0].imagem_base64"
-                                        class="border-2 border-white rounded-xl shadow-sm" />
+                                        class="border-2 border-white rounded-xl shadow-sm w-10" />
                                 </div>
                             </template>
                             <template v-for="p in (produtos[0]?.precos || 0)" #[`cell-tabela_${p.tabela_id}`]="{ row }"
@@ -56,27 +57,51 @@
                 </div>
 
                 <div v-else-if="activeProdutosTab === 'Gerenciar Estoque'">
-                    <h3 class="text-lg font-semibold">Gerenciar Estoque</h3>
-                    <p class="text-gray-600 dark:text-gray-400">Controle de estoque dos produtos.</p>
+                    <ButtonCustom icon="bx-plus" text="Habilitar gerência de estoque" url="/produtos/create"
+                        :outline="false" />
                 </div>
 
                 <div v-else-if="activeProdutosTab === 'Importar Fotos'">
-                    <h3 class="text-lg font-semibold">Importar Fotos</h3>
-                    <p class="text-gray-600 dark:text-gray-400">Upload de imagens para produtos em lote.</p>
+                    <!-- BLOCO UPLOAD DE FOTOS -->
+                    <div class="relative w-full border-2 border-dashed border-gray-300 hover:border-indigo-500 rounded-xl bg-gray-50 dark:bg-gray-800 p-6 flex flex-col items-center justify-center text-center cursor-pointer transition"
+                        @dragover.prevent="isDragging = true" @dragleave.prevent="isDragging = false"
+                        @drop.prevent="handleDrop" @click="triggerFileInput">
+                        <!-- Estado visual ao arrastar -->
+                        <div v-if="isDragging"
+                            class="absolute inset-0 bg-indigo-50/70 dark:bg-indigo-500/10 rounded-xl border-2 border-indigo-400 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-medium">
+                            Solte os arquivos aqui
+                        </div>
+
+                        <!-- Conteúdo padrão -->
+                        <div class="pointer-events-none">
+                            <p class="text-indigo-600 font-medium mb-1">Arraste e solte suas fotos aqui</p>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm">
+                                ou clique para selecionar arquivos do computador
+                            </p>
+                            <p class="text-xs mt-2 text-gray-500 dark:text-gray-500">
+                                Caso o nome do arquivo for o código de um produto ele automaticamente será atribuído ao mesmo.<br />
+                                Formatos aceitos: JPG, JPEG, PNG, GIF &nbsp;•&nbsp; Máx: 2MB por imagem. <br />
+                                Dimensão recomendada: 800 x 800 pixels<br />
+                            </p>
+                        </div>
+
+                        <!-- Input invisível -->
+                        <input ref="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.gif" class="hidden"
+                            @change="handleFiles" />
+                    </div>
+
                 </div>
             </div>
         </div>
 
         <!-- Conteúdo Promoções -->
         <div v-else-if="activeMainTab === 'Promoções'">
-            <h3 class="text-lg font-semibold">Promoções</h3>
-            <p class="text-gray-600 dark:text-gray-400">Aqui você gerencia promoções.</p>
+            <ButtonCustom icon="bx-plus" text="Nova promoção" url="/produtos/create" :outline="false" />
         </div>
 
         <!-- Conteúdo Destaques -->
         <div v-else-if="activeMainTab === 'Destaques'">
-            <h3 class="text-lg font-semibold">Destaques</h3>
-            <p class="text-gray-600 dark:text-gray-400">Aqui você gerencia produtos em destaque.</p>
+            <ButtonCustom icon="bx-plus" text="Novo destaque" url="/produtos/create" :outline="false" />
         </div>
 
         <!-- Conteúdo Configurações -->
@@ -85,7 +110,8 @@
             <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
                 <nav class="flex space-x-2">
                     <button v-for="sub in configTabs" :key="sub.name" @click="activeConfigTab = sub.name"
-                        class="flex items-center space-x-2 px-3 py-1 text-sm font-medium" :class="activeConfigTab === sub.name
+                        class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
+                        :class="activeConfigTab === sub.name
                             ? 'text-indigo-700 dark:text-white border-b-2'
                             : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'">
                         <i :class="sub.icon + ' text-base'"></i>
@@ -97,23 +123,20 @@
             <!-- Conteúdo das sub-tabs Configurações -->
             <div class="mt-4">
                 <div v-if="activeConfigTab === 'Categorias'">
-                    <h3 class="text-lg font-semibold">Categorias</h3>
-                    <p class="text-gray-600 dark:text-gray-400">Gerencie categorias de produtos.</p>
+                    <ButtonCustom icon="bx-plus" text="Nova categoria" url="/produtos/create" :outline="false" />
                 </div>
 
                 <div v-else-if="activeConfigTab === 'Variações de Produto'">
-                    <h3 class="text-lg font-semibold">Variações de Produto</h3>
-                    <p class="text-gray-600 dark:text-gray-400">Gerencie variações e atributos de produtos.</p>
+                    <ButtonCustom icon="bx-plus" text="Nova variação" url="/produtos/create" :outline="false" />
                 </div>
 
                 <div v-else-if="activeConfigTab === 'Período de Inatividade'">
-                    <h3 class="text-lg font-semibold">Período de Inatividade</h3>
-                    <p class="text-gray-600 dark:text-gray-400">Defina períodos de inatividade para produtos.</p>
+                    <ButtonCustom icon="bx-edit" text="Alterar periodo de inativadade" url="/produtos/create"
+                        :outline="false" />
                 </div>
 
                 <div v-else-if="activeConfigTab === 'Tributações'">
-                    <h3 class="text-lg font-semibold">Tributações</h3>
-                    <p class="text-gray-600 dark:text-gray-400">Gerencie regras de tributação dos produtos.</p>
+                    <ButtonCustom icon="bx-plus" text="Nova regra de cálculo" url="/produtos/create" :outline="false" />
                 </div>
             </div>
         </div>
@@ -127,6 +150,9 @@ import DataTable from "@/components/DataTable.vue";
 import { usePage } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
 import { formatCurrency } from "@/lib/utils";
+
+const fileInput = ref(null)
+const isDragging = ref(false)
 
 defineOptions({ layout: AppLayout });
 
@@ -184,4 +210,23 @@ const produtosNormalizados = produtos.value.map(produto => {
     });
     return { ...produto, ...precosObj };
 });
+
+function triggerFileInput() {
+  fileInput.value?.click()
+}
+
+function handleFiles(event) {
+  const files = event.target.files
+  if (!files.length) return
+  console.log('Arquivos selecionados:', files)
+  // aqui você pode enviar para o servidor ou exibir previews
+}
+
+function handleDrop(event) {
+  isDragging.value = false
+  const files = event.dataTransfer.files
+  if (!files.length) return
+  console.log('Arquivos arrastados:', files)
+  // também pode tratar o upload aqui
+}
 </script>
