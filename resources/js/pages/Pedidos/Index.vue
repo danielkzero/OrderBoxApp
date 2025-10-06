@@ -87,23 +87,77 @@
       <!-- Conteúdo das sub-tabs -->
       <div class="mt-4">
         <div v-if="activeConfigTab === 'Campos extras'">
-          <h3 class="text-lg font-semibold">Campos extras</h3>
-          <p class="text-gray-600 dark:text-gray-400">Configuração de campos adicionais do pedido.</p>
+          <ButtonCustom icon="bx-plus" text="Novo campo extra" url="/produtos/create" :outline="false" />
         </div>
 
         <div v-else-if="activeConfigTab === 'Status de pedido'">
-          <h3 class="text-lg font-semibold">Status de pedido</h3>
-          <p class="text-gray-600 dark:text-gray-400">Aqui você gerencia os status de pedidos.</p>
+          <ButtonCustom icon="bx-plus" text="Novo status de pedido" url="/produtos/create" :outline="false" />
         </div>
 
         <div v-else-if="activeConfigTab === 'Tipo de pedido'">
-          <h3 class="text-lg font-semibold">Tipo de pedido</h3>
-          <p class="text-gray-600 dark:text-gray-400">Defina os tipos de pedido disponíveis.</p>
+          <ButtonCustom icon="bx-plus" text="Novo tipo de pedido" url="/produtos/create" :outline="false" />
         </div>
 
         <div v-else>
-          <h3 class="text-lg font-semibold">Geral</h3>
-          <p class="text-gray-600 dark:text-gray-400">Configurações gerais dos pedidos.</p>
+          <!-- ITENS DO PEDIDO -->
+          <h3 class="text-gray-700 dark:text-gray-200 font-semibold my-3">ITENS DO PEDIDO</h3>
+          <div class="space-y-3">
+            <!-- Radio buttons -->
+            <div class="grid grid-cols-1 md:grid-cols-2 space-y-2 space-x-2">
+              <label class="flex items-start space-x-2 bg-white border rounded-xl p-4 h-full" :class="pedidoConfig.itensDuplicados == 'permitir' ? 'border-indigo-500' : 'border-gray-300'">
+                <input type="radio" value="permitir" v-model="pedidoConfig.itensDuplicados" class="mt-1">
+                <div>
+                  <span class="font-medium text-gray-800 dark:text-gray-50">Permitir itens duplicados</span>
+                  <p class="text-gray-500 dark:text-gray-400 text-sm">
+                    Permite que o mesmo item seja adicionado ao pedido mais de uma vez. Selecione essa opção se você
+                    precisa
+                    adicionar o mesmo produto com diferentes preços no pedido.
+                  </p>
+                </div>
+              </label>
+
+              <label class="flex items-start space-x-2 bg-white border rounded-xl border-gray-300 p-4 h-full" :class="pedidoConfig.itensDuplicados == 'nao-permitir' ? 'border-indigo-500' : 'border-gray-300'">
+                <input type="radio" value="nao-permitir" v-model="pedidoConfig.itensDuplicados" class="mt-1">
+                <div>
+                  <span class="font-medium text-gray-800 dark:text-gray-50">Não permitir itens duplicados</span>
+                  <p class="text-gray-500 dark:text-gray-400 text-sm">
+                    Não permite que o mesmo item seja adicionado mais de uma vez no pedido.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <!-- Checkbox venda produtos com valor zero -->
+            <label class="flex items-start space-x-2 my-4">
+              <input type="checkbox" v-model="pedidoConfig.naoVenderZero" class="mt-1">
+              <div>
+                <span class="text-gray-800 dark:text-gray-50 font-medium">Não permitir a venda de produtos que tem valor
+                  zero na tabela de preços</span>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">
+                  Se essa opção estiver marcada, o sistema não permitirá que produtos com valor zerado na tabela de
+                  preços
+                  sejam adicionados aos orçamentos/pedidos. No e-commerce B2B estes produtos nem serão exibidos no
+                  catálogo.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          <!-- CAMPOS OBRIGATÓRIOS -->
+          <h3 class="text-gray-700 dark:text-gray-200 font-semibold my-3">CAMPOS OBRIGATÓRIOS</h3>
+          <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded space-y-3">
+            <p class="text-gray-500 dark:text-gray-400 text-sm mb-2">Selecione os campos que devem ser obrigatórios:</p>
+
+            <label class="flex items-center space-x-2">
+              <input type="checkbox" v-model="pedidoConfig.camposObrigatorios.transportadora">
+              <span class="text-gray-800 dark:text-gray-50">Transportadora</span>
+            </label>
+
+            <label class="flex items-center space-x-2">
+              <input type="checkbox" v-model="pedidoConfig.camposObrigatorios.valorFrete">
+              <span class="text-gray-800 dark:text-gray-50">Valor de frete</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -125,6 +179,15 @@ defineOptions({
 
 const page = usePage();
 const pedidos = ref(page.props.pedidos);
+
+const pedidoConfig = ref({
+  itensDuplicados: 'nao-permitir',
+  naoVenderZero: false,
+  camposObrigatorios: {
+    transportadora: false,
+    valorFrete: false
+  }
+});
 
 const statusMap = {
   aprovado: { label: "Aprovado", class: "bg-green-200 text-green-800 px-2 py-1 rounded" },
