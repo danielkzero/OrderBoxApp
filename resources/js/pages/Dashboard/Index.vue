@@ -38,9 +38,9 @@
             <div class="md:col-span-9 col-span-12">
                 <div class="grid grid-cols-12 gap-3">
                     <!-- Cards de Métricas -->
-                    <div class="xl:col-span-3 col-span-12" v-for="(card, index) in cards" :key="card.label">
+                    <div class="xl:col-span-3 col-span-12" v-for="card in cards" :key="card.label">
                         <div
-                            class="p-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors hover:border-indigo-300 dark:hover:border-indigo-600">
+                            class="cursor-pointer p-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors hover:border-indigo-300 dark:hover:border-indigo-600">
                             <div class="flex items-start justify-between mb-3 flex-wrap">
                                 <div>
                                     <span class="block mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -94,7 +94,7 @@
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Vendas Mensais</h3>
                                 <i class="bx bx-bar-chart-alt-2 text-gray-400 text-xl"></i>
                             </div>
-                            <apexchart type="bar" height="285" :options="chartVendas.options"
+                            <apexchart type="bar" height="285" class="text-gray-700" :options="chartVendas.options"
                                 :series="chartVendas.series" />
                         </div>
                     </div>
@@ -125,10 +125,8 @@
                                         <i :class="categoria.icone + ' text-white text-sm'"></i>
                                     </div>
                                     <div>
-                                        <div class="font-medium text-gray-900 dark:text-white text-sm">{{ categoria.nome
-                                            }}</div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ categoria.vendas }}
-                                            vendas</div>
+                                        <div class="font-medium text-gray-900 dark:text-white text-sm">{{ categoria.nome }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ categoria.vendas }} vendas</div>
                                     </div>
                                 </div>
                                 <div class="text-right">
@@ -221,19 +219,6 @@
             </div>
         </div>
 
-        <!-- Row 3: Mapa -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-            <div class="flex items-center justify-between mb-5">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Mapa de Vendas</h3>
-                <i class="bx bx-map-alt text-gray-400 text-xl"></i>
-            </div>
-            <div
-                class="h-80 flex items-center justify-center text-gray-400 dark:text-gray-500 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-                <i class="bx bx-map text-4xl"></i>
-                <span class="ml-2 text-sm">Mapa de calor de vendas</span>
-            </div>
-        </div>
-
         <!-- Row 4: Produtos Mais Vendidos -->
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
             <div class="flex items-center justify-between mb-5">
@@ -250,6 +235,7 @@
 import AppLayout from "@/layouts/AppLayout.vue";
 import { ref, watch } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
+import { formatCurrency } from "@/lib/utils";
 
 defineOptions({ layout: AppLayout });
 
@@ -260,14 +246,6 @@ const filtros = ref({
     inicio: page.props.inicio || new Date().toISOString().slice(0, 10),
     final: page.props.final || new Date().toISOString().slice(0, 10),
 });
-
-// Função para formatar valores em BRL
-function formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value);
-}
 
 // Cards principais
 const cards = ref([
@@ -310,20 +288,47 @@ const chartStatus = ref({
     },
 });
 
-// Chart vendas mensais (linha)
 const chartVendas = ref({
-    series: [
-        { name: 'Vendas', data: [] }
-    ],
+    series: [],     
     options: {
-        chart: { type: 'line', toolbar: { show: false }, fontFamily: 'inherit' },
-        xaxis: {
-            categories: page.props.chartMeses ?? [],
-            labels: { style: { fontFamily: 'inherit' } }
+        chart: {
+            type: 'line',
+            toolbar: { show: false },
+            fontFamily: 'inherit',
+            zoom: {
+            enabled: false
+          },
         },
-        yaxis: { labels: { style: { fontFamily: 'inherit' } } },
-        stroke: { curve: "smooth", width: 2 },
-        grid: { borderColor: '#f1f5f9' },
+        xaxis: {
+            categories: page.props.categoriasMeses ?? [],
+            labels: { 
+                style: { colors: '#374151', fontFamily: 'inherit' }
+            }
+        },
+        yaxis: {
+            labels: { 
+                style: { colors: '#374151', fontFamily: 'inherit' }
+            }
+        },
+        dataLabels: {
+          enabled: false
+        },
+        stroke: { curve: 'smooth', width: 2 },
+        grid: { borderColor: '#f3f3f3' },
+        legend: {
+            show: true,
+            position: 'top',
+            labels: { colors: '#374151' }
+        },
+        tooltip: {
+            y: { formatter: (val) => `R$ ${val.toFixed(2)}` }
+        },
+        markers: {
+          size: 4,
+          hover: {
+            sizeOffset: 6
+          }
+        }
     },
 });
 
@@ -333,7 +338,7 @@ const chartProdutos = ref({
         { name: "Quantidade Vendida", data: page.props.produtosQtd ?? [] }
     ],
     options: {
-        chart: { toolbar: { show: false }, fontFamily: 'inherit' },
+        chart: { toolbar: { show: false }, fontFamily: 'inherit', zoom: { enabled: false }},
         xaxis: { categories: page.props.produtosNomes ?? [], labels: { style: { fontFamily: 'inherit' } } },
         yaxis: { labels: { style: { fontFamily: 'inherit' } } },
         stroke: { curve: "smooth", width: 3 },
@@ -390,12 +395,14 @@ watch(
         cards.value[3].value = formatCurrency(newProps.receitaTotal ?? 0);
 
         chartStatus.value.series = newProps.pedidosStatusSeries ?? [0, 0, 0];
-        chartVendas.value.series[0].data = newProps.vendasMensais ?? [];
+
+        chartVendas.value.series = newProps.vendasMensais ?? [];
+
         chartVendas.value.options = {
             ...chartVendas.value.options,
             xaxis: {
                 ...chartVendas.value.options.xaxis,
-                categories: newProps.meses ?? [],
+                categories: newProps.categoriasMeses ?? [],
             }
         };
         
