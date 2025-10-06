@@ -41,8 +41,8 @@ class DashboardController extends Controller
         $totalProdutos = PedidosItens::whereHas('pedido', function ($query) use ($empresa, $inicio, $final) {
             $query->where('empresa_id', $empresa)->whereBetween('data_emissao', [$inicio, $final]);
         })
-        ->distinct('produto_id')
-        ->count('produto_id');
+            ->distinct('produto_id')
+            ->count('produto_id');
 
         $totalUsuarios = EmpresasUsers::where('empresa_id', $empresa)->count();
         $receitaTotal = Pedidos::where('empresa_id', $empresa)->whereBetween('data_emissao', [$inicio, $final])->sum('total');
@@ -54,23 +54,44 @@ class DashboardController extends Controller
             Pedidos::where(['status' => 'cancelado', 'empresa_id' => $empresa])->whereBetween('data_emissao', [$inicio, $final])->count(),
         ];
 
-        // Vendas mensais (últimos 6 meses)
-        $vendasMensais = Pedidos::selectRaw('MONTH(data_emissao) as mes, SUM(total) as total')
+        // Vendas mensais/ano
+        $vendas = Pedidos::selectRaw('YEAR(data_emissao) as ano, MONTH(data_emissao) as mes, SUM(total) as total')
             ->where('empresa_id', $empresa)
             ->whereBetween('data_emissao', [$inicio, $final])
-            ->groupBy('mes')
+            ->groupBy('ano', 'mes')
+            ->orderBy('ano')
             ->orderBy('mes')
-            ->pluck('total')
-            ->toArray();
+            ->get();
 
-        $meses = Pedidos::selectRaw('MONTH(data_emissao) as mes')
-            ->where('empresa_id', $empresa)
-            ->whereBetween('data_emissao', [$inicio, $final])
-            ->groupBy('mes')
-            ->orderBy('mes')
-            ->pluck('mes')
-            ->map(fn($m) => date('M', mktime(0, 0, 0, $m, 1)))
-            ->toArray();
+        $anos = $vendas->pluck('ano')->unique()->values()->toArray();
+        $meses = range(1, 12);  // Jan a Dez
+
+        // Montar as séries para cada ano
+        $series = [];
+        foreach ($anos as $ano) {
+            $data = [];
+            foreach ($meses as $mes) {
+                $valor = $vendas
+                    ->where('ano', $ano)
+                    ->where('mes', $mes)
+                    ->pluck('total')
+                    ->first() ?? 0;
+                $data[] = $valor;
+            }
+
+            $series[] = [
+                'name' => (string) $ano,
+                'data' => $data,
+            ];
+        }
+
+        $nomesMeses = [
+            1 => 'Jan', 2 => 'Fev', 3 => 'Mar', 4 => 'Abr',
+            5 => 'Mai', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
+            9 => 'Set', 10 => 'Out', 11 => 'Nov', 12 => 'Dez'
+        ];
+
+        $categorias = array_map(fn($m) => $nomesMeses[$m], $meses);
 
         // Produtos mais vendidos
         $produtosMaisVendidos = DB::table('pedidos_itens')
@@ -176,6 +197,20 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Buscar os municípios com vendas (sem path)
+        $municipiosVendas = DB::table('pedidos')
+            ->where('pedidos.empresa_id', $empresa)
+            ->whereBetween('pedidos.data_emissao', [$inicio, $final])
+            ->join('clientes', 'pedidos.cliente_id', '=', 'clientes.id')
+            ->select(
+                'clientes.municipio_codigo',
+                DB::raw('SUM(pedidos.total) AS valor_total'),
+                DB::raw('COUNT(pedidos.id) AS qtd_vendas')
+            )
+            ->groupBy('clientes.municipio_codigo')
+            ->orderByDesc('valor_total')
+            ->get();
+
         return Inertia::render('Dashboard/Index', [
             'totalPedidos' => $totalPedidos,
             'totalClientes' => $totalClientes,
@@ -183,8 +218,8 @@ class DashboardController extends Controller
             'totalUsuarios' => $totalUsuarios,
             'receitaTotal' => $receitaTotal,
             'pedidosStatusSeries' => $pedidosStatusSeries,
-            'vendasMensais' => $vendasMensais,
-            'meses' => $meses,
+            'vendasMensais' => $series,
+            'categoriasMeses' => $categorias,
             'produtosNomes' => $produtosNomes,
             'produtosQtd' => $produtosQtd,
             'topUsuarios' => $topUsuarios,
