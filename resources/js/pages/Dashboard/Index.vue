@@ -312,7 +312,9 @@ const chartStatus = ref({
 
 // Chart vendas mensais (linha)
 const chartVendas = ref({
-    series: page.props.chartSeries ?? [],
+    series: [
+        { name: 'Vendas', data: [] }
+    ],
     options: {
         chart: { type: 'line', toolbar: { show: false }, fontFamily: 'inherit' },
         xaxis: {
@@ -396,6 +398,7 @@ watch(
                 categories: newProps.meses ?? [],
             }
         };
+        
         chartProdutos.value.series[0].data = newProps.produtosQtd ?? [];
         chartProdutos.value.options.xaxis.categories = newProps.produtosNomes ?? [];
 
