@@ -26,6 +26,7 @@ Anteriormente, a sidebar apresentava os seguintes problemas:
 Foi realizada uma refatoração completa do componente `<Sidebar>`:
 
 ### 📄 Estrutura Vue 3
+- caminho: (./resources/js/layouts/AppLayout.vue:6)
 ```vue
 <aside
   :class="[
