@@ -3,14 +3,14 @@
     <!-- Tabs principais -->
     <div class="border-b border-gray-200 dark:border-gray-700">
       <nav class="-mb-px flex space-x-8">
-        <button v-for="tab in mainTabs" :key="tab.name" @click="activeMainTab = tab.name"
+        <Link :href="tab.url" v-for="tab in mainTabs" :key="tab.name" @click="activeMainTab = tab.name"
           class="flex items-center space-x-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
           :class="activeMainTab === tab.name
             ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'">
           <i :class="tab.icon + ' text-lg'"></i>
           <span>{{ tab.name }}</span>
-        </button>
+        </Link>
       </nav>
     </div>
 
@@ -74,13 +74,13 @@
       <!-- Sub-tabs -->
       <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
         <nav class="flex space-x-2">
-          <button v-for="sub in configTabs" :key="sub.name" @click="activeConfigTab = sub.name"
+          <Link :href="sub.url" v-for="sub in configTabs" :key="sub.name" @click="activeConfigTab = sub.name"
             class="flex items-center space-x-2 px-3 py-1 text-sm font-medium" :class="activeConfigTab === sub.name
               ? 'text-indigo-700 dark:text-white border-b-2'
               : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'">
             <i :class="sub.icon + ' text-base'"></i>
             <span>{{ sub.name }}</span>
-          </button>
+          </Link>
         </nav>
       </div>
 
@@ -170,7 +170,7 @@ import { ref } from "vue";
 import ButtonCustom from "@/components/ButtonCustom.vue";
 import DataTable from "@/components/DataTable.vue";
 import FormField from "@/components/FormField.vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, Link } from "@inertiajs/vue3";
 import { formatCurrency } from "@/lib/utils";
 
 defineOptions({
@@ -205,17 +205,17 @@ const columns = [
 
 // Tabs principais com ícones
 const mainTabs = [
-  { name: "Pedidos", icon: "bx bx-cart" },
-  { name: "Configurações", icon: "bx bx-cog" },
+  { name: "Pedidos", icon: "bx bx-cart", url: "./pedidos" },
+  { name: "Configurações", icon: "bx bx-cog", url: "./pedidos/configuracoes" },
 ];
 const activeMainTab = ref("Pedidos");
 
 // Sub-tabs com ícones
 const configTabs = [
-  { name: "Campos extras", icon: "bx bx-list-plus" },
-  { name: "Status de pedido", icon: "bx bx-check-circle" },
-  { name: "Tipo de pedido", icon: "bx bx-category" },
-  { name: "Geral", icon: "bx bx-slider" },
+  { name: "Campos extras", icon: "bx bx-list-plus", url: `./pedidos/configuracoes/campos_extras` },
+  { name: "Status de pedido", icon: "bx bx-check-circle", url: "./pedidos/configuracoes/status_pedido" },
+  { name: "Tipo de pedido", icon: "bx bx-category", url: "./pedidos/configuracoes/tipo_pedido" },
+  { name: "Geral", icon: "bx bx-slider", url: "./pedidos/configuracoes/geral" },
 ];
 const activeConfigTab = ref("Campos extras");
 

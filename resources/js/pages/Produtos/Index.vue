@@ -3,14 +3,14 @@
         <!-- Tabs principais -->
         <div class="border-b border-gray-200 dark:border-gray-700">
             <nav class="-mb-px flex space-x-8">
-                <button v-for="tab in mainTabs" :key="tab.name" @click="activeMainTab = tab.name"
+                <Link :href="tab.url" v-for="tab in mainTabs" :key="tab.name" @click="activeMainTab = tab.name"
                     class="flex items-center space-x-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
                     :class="activeMainTab === tab.name
                         ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'">
                     <i :class="tab.icon + ' text-lg'"></i>
                     <span>{{ tab.name }}</span>
-                </button>
+                </Link>
             </nav>
         </div>
 
@@ -19,14 +19,14 @@
             <!-- Sub-tabs Produtos -->
             <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
                 <nav class="flex space-x-2">
-                    <button v-for="sub in produtosTabs" :key="sub.name" @click="activeProdutosTab = sub.name"
+                    <Link :href="sub.url" v-for="sub in produtosTabs" :key="sub.name" @click="activeProdutosTab = sub.name"
                         class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
                         :class="activeProdutosTab === sub.name
                             ? 'text-indigo-700 dark:text-white border-b-2'
                             : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'">
                         <i :class="sub.icon + ' text-base'"></i>
                         <span>{{ sub.name }}</span>
-                    </button>
+                    </Link>
                 </nav>
             </div>
 
@@ -109,14 +109,14 @@
             <!-- Sub-tabs Configurações -->
             <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
                 <nav class="flex space-x-2">
-                    <button v-for="sub in configTabs" :key="sub.name" @click="activeConfigTab = sub.name"
+                    <Link :href="sub.url" v-for="sub in configTabs" :key="sub.name" @click="activeConfigTab = sub.name"
                         class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
                         :class="activeConfigTab === sub.name
                             ? 'text-indigo-700 dark:text-white border-b-2'
                             : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'">
                         <i :class="sub.icon + ' text-base'"></i>
                         <span>{{ sub.name }}</span>
-                    </button>
+                    </Link>
                 </nav>
             </div>
 
@@ -144,10 +144,10 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref } from "vue";
 import ButtonCustom from "@/components/ButtonCustom.vue";
 import DataTable from "@/components/DataTable.vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, Link } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
 import { formatCurrency } from "@/lib/utils";
 
@@ -160,27 +160,27 @@ const page = usePage();
 const produtos = ref(page.props.produtos || { data: [], meta: {} });
 
 const mainTabs = [
-    { name: "Produtos", icon: "bx bx-box" },
-    { name: "Promoções", icon: "bx bx-badge" },
-    { name: "Destaques", icon: "bx bx-star" },
-    { name: "Configurações", icon: "bx bx-cog" },
+    { name: "Produtos", icon: "bx bx-box", url: "./produtos" },
+    { name: "Promoções", icon: "bx bx-badge", url: "./produtos/promocoes" },
+    { name: "Destaques", icon: "bx bx-star", url: "./produtos/destaques" },
+    { name: "Configurações", icon: "bx bx-cog", url: "./produtos/configuracoes" },
 ];
 const activeMainTab = ref("Produtos");
 
 // Sub-tabs Produtos
 const produtosTabs = [
-    { name: "Produtos e Tabelas", icon: "bx bx-list-ul" },
-    { name: "Gerenciar Estoque", icon: "bx bx-store" },
-    { name: "Importar Fotos", icon: "bx bx-image-add" },
+    { name: "Produtos e Tabelas", icon: "bx bx-list-ul", url: "./produtos/tabelas" },
+    { name: "Gerenciar Estoque", icon: "bx bx-store", url: "./produtos/gerenciar_estoque" },
+    { name: "Importar Fotos", icon: "bx bx-image-add", url: "./produtos/importar_fotos" },
 ];
 const activeProdutosTab = ref("Produtos e Tabelas");
 
 // Sub-tabs Configurações
 const configTabs = [
-    { name: "Categorias", icon: "bx bx-category" },
-    { name: "Variações de Produto", icon: "bx bx-transfer" },
-    { name: "Período de Inatividade", icon: "bx bx-time" },
-    { name: "Tributações", icon: "bx bx-receipt" },
+    { name: "Categorias", icon: "bx bx-category", url: "./produtos/configuracoes/categorias" },
+    { name: "Variações de Produto", icon: "bx bx-transfer", url: "./produtos/configuracoes/variacoes_produto" },
+    { name: "Período de Inatividade", icon: "bx bx-time", url: "./produtos/configuracoes/periodo_inatividade" },
+    { name: "Tributações", icon: "bx bx-receipt", url: "./produtos/configuracoes/tributacoes" },
 ];
 const activeConfigTab = ref("Categorias");
 
