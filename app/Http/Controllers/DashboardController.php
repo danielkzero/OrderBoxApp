@@ -121,7 +121,7 @@ class DashboardController extends Controller
             ->map(fn($u) => [
                 'nome' => $u->name,
                 'vendas' => $u->vendas,
-                'valor' => number_format($u->valor, 2, ',', '.')
+                'valor' => $u->valor
             ]);
 
         // Vendas recentes
@@ -134,7 +134,7 @@ class DashboardController extends Controller
             ->map(fn($p) => [
                 'pedido' => $p->id,
                 'cliente' => $p->cliente?->razao_social ?? 'Cliente',
-                'valor' => number_format($p->total, 2, ',', '.'),
+                'valor' => $p->total,
                 'data' => $p->data_emissao?->format('d/m/Y')
             ]);
 
@@ -147,7 +147,7 @@ class DashboardController extends Controller
             ->select('produtos.nome', DB::raw('COUNT(pedidos_itens.id) as recompras'))
             ->groupBy('produtos.nome')
             ->orderByDesc('recompras')
-            ->limit(5)
+            ->limit(6)
             ->get()
             ->map(fn($p) => [
                 'nome' => $p->nome,
@@ -160,13 +160,13 @@ class DashboardController extends Controller
             ->whereBetween('pedidos.data_emissao', [$inicio, $final])
             ->join('clientes', 'pedidos.cliente_id', '=', 'clientes.id')
             ->join('cidades_ibge', 'clientes.municipio_codigo', '=', 'cidades_ibge.municipio_codigo')
-            ->select('cidades_ibge.municipio_nome as cidade', DB::raw('COUNT(pedidos.id) as vendas'))
-            ->groupBy('cidades_ibge.municipio_nome')
+            ->select('cidades_ibge.municipio_nome as cidade', 'cidades_ibge.uf_nome as uf', DB::raw('COUNT(pedidos.id) as vendas'))
+            ->groupBy('cidades_ibge.municipio_nome', 'cidades_ibge.uf_nome')
             ->orderByDesc('vendas')
-            ->limit(5)
+            ->limit(10)
             ->get()
             ->map(fn($r) => [
-                'nome' => $r->cidade,
+                'nome' => $r->cidade . ' - ' . $r->uf,
                 'vendas' => $r->vendas
             ]);
 
@@ -190,7 +190,7 @@ class DashboardController extends Controller
                 return [
                     'nome' => $cat->nome,
                     'vendas' => $cat->vendas,
-                    'valor' => number_format($cat->valor, 2, ',', '.'),
+                    'valor' => $cat->valor,
                     'variacao' => rand(-15, 15),
                     'icone' => 'bx bx-category',
                     'cor' => 'bg-indigo-500',
