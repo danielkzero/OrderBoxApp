@@ -121,12 +121,12 @@ import { usePage, router } from "@inertiajs/vue3";
 const page = usePage();
 const empresas = ref(page.props.empresas || []);
 
-const urlParts = window.location.pathname.split('/').filter(Boolean);
+const urlParts = window.location.pathname.split(/[/?]/).filter(Boolean);
 const empresaIdDaUrl = Number(urlParts[0]) || (empresas.value[0]?.id || null);
 
 const empresa = ref(empresaIdDaUrl || null);
 
-const sidebarCollapsed = ref(false); 
+const sidebarCollapsed = ref(false);
 const mobileOpen = ref(false);
 const dropdownOpen = ref(false);
 const sidebarCollapsedMode = ref(false);
