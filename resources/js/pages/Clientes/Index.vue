@@ -2,13 +2,13 @@
     <div class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-50 rounded-sm shadow">
         <!-- Tabs principais -->
         <div class="border-b border-gray-200 dark:border-gray-700 flex space-x-6 px-4">
-            <button v-for="tab in mainTabs" :key="tab.name" @click="activeMainTab = tab.name"
+            <Link :href="tab.url" v-for="tab in mainTabs" :key="tab.name" @click="activeMainTab = tab.name"
                 class="flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm" :class="activeMainTab === tab.name
                     ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'">
-                <i :class="tab.icon + ' text-lg'"></i>
-                <span>{{ tab.name }}</span>
-            </button>
+            <i :class="tab.icon + ' text-lg'"></i>
+            <span>{{ tab.name }}</span>
+            </Link>
         </div>
 
         <!-- Conteúdo Clientes -->
@@ -85,19 +85,19 @@
         <div v-else>
             <div class="bg-gray-100 dark:bg-gray-800">
                 <nav class="flex space-x-2">
-                    <button v-for="sub in configTabs" :key="sub.name" @click="activeConfigTab = sub.name"
+                    <Link :href="sub.url" v-for="sub in configTabs" :key="sub.name" @click="activeConfigTab = sub.name"
                         class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
                         :class="activeConfigTab === sub.name
                             ? 'text-indigo-700 dark:text-white border-b-2'
                             : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'">
-                        <i :class="sub.icon + ' text-base'"></i>
-                        <span>{{ sub.name }}</span>
-                    </button>
+                    <i :class="sub.icon + ' text-base'"></i>
+                    <span>{{ sub.name }}</span>
+                    </Link>
                 </nav>
             </div>
 
             <div class="p-6 text-center text-gray-500" v-if="activeConfigTab.toLowerCase() != 'geral'">
-                <p>Nenhum {{ activeConfigTab.toLowerCase() }} configurado.</p> 
+                <p>Nenhum {{ activeConfigTab.toLowerCase() }} configurado.</p>
                 <button class="mt-3 px-4 py-2 bg-indigo-600 text-white text-sm rounded">
                     <i class="bx bx-plus"></i> Adicionar {{ activeConfigTab.toLowerCase() }}
                 </button>
@@ -123,8 +123,7 @@
                 <h3 class="text-gray-700 dark:text-gray-200 font-semibold my-3">
                     CAMPOS OBRIGATÓRIOS
                 </h3>
-                <div
-                    class="bg-gray-50 p-4 rounded-xl dark:border-gray-700 space-y-4">
+                <div class="bg-gray-50 p-4 rounded-xl dark:border-gray-700 space-y-4">
                     <p class="text-gray-500 dark:text-gray-400 text-sm">
                         Selecione os campos do cadastro de clientes que devem ser obrigatórios:
                     </p>
@@ -222,9 +221,10 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import AppLayout from "@/layouts/AppLayout.vue";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, Link } from "@inertiajs/vue3";
+import ButtonCustom from "@/components/ButtonCustom.vue";
 
 defineOptions({
     layout: AppLayout,
@@ -238,8 +238,8 @@ const search = ref("");
 const clientes = page.props.clientes;
 
 const clienteConfig = ref({
-      bloquearDuplicidade: true,
-      camposObrigatorios: {
+    bloquearDuplicidade: true,
+    camposObrigatorios: {
         cpfCnpj: false,
         nomeFantasia: false,
         telefone: false,
@@ -254,8 +254,8 @@ const clienteConfig = ref({
         bairro: false,
         cidade: false,
         estado: false
-      }
-    });
+    }
+});
 
 // Dados do gráfico
 const series = page.props.chartData.series;
@@ -263,20 +263,20 @@ const counts = page.props.chartData.counts;
 
 // Tabs
 const mainTabs = [
-    { name: "Clientes", icon: "bx bx-user" },
-    { name: "Configurações", icon: "bx bx-cog" },
+    { name: "Clientes", icon: "bx bx-user", url: `./clientes` },
+    { name: "Configurações", icon: "bx bx-cog", url: "./clientes/configuracoes" },
 ];
 const activeMainTab = ref("Clientes");
 
 const configTabs = [
-    { name: "Campos extras", icon: "bx bx-list-plus" },
-    { name: "Tags", icon: "bx bx-purchase-tag-alt" },
-    { name: "Segmentos", icon: "bx bx-sitemap" },
-    { name: "Redes", icon: "bx bx-network-chart" },
-    { name: "Exceções Fiscais", icon: "bx bx-bank" },
-    { name: "Resultados dos Atendimentos", icon: "bx bx-task" },
-    { name: "Motivos de bloqueio", icon: "bx bx-block" },
-    { name: "Geral", icon: "bx bx-slider" },
+    { name: "Campos extras", icon: "bx bx-list-plus", url: "./clientes/configuracoes/campos_extras" },
+    { name: "Tags", icon: "bx bx-purchase-tag-alt", url: "./clientes/configuracoes/tags" },
+    { name: "Segmentos", icon: "bx bx-sitemap", url: "./clientes/configuracoes/segmentos" },
+    { name: "Redes", icon: "bx bx-network-chart", url: "./clientes/configuracoes/redes" },
+    { name: "Exceções Fiscais", icon: "bx bx-bank", url: "./clientes/configuracoes/excecoes_fiscais" },
+    { name: "Resultados dos Atendimentos", icon: "bx bx-task", url: "./clientes/configuracoes/resultados_atendimentos" },
+    { name: "Motivos de bloqueio", icon: "bx bx-block", url: "./clientes/configuracoes/tags" },
+    { name: "Geral", icon: "bx bx-slider", url: "./clientes/configuracoes/tags/geral" },
 ];
 const activeConfigTab = ref("Campos extras");
 
@@ -287,4 +287,5 @@ const chartOptions = {
     legend: { show: false },
     dataLabels: { enabled: false },
 };
+
 </script>
