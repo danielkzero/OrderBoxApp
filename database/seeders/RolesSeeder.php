@@ -26,6 +26,6 @@ class RolesSeeder extends Seeder
             ],
         ]);
 
-        Roles::factory()->count(20)->create();
+        Roles::factory()->count(3)->create();
     }
 }
