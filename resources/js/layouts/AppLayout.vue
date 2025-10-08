@@ -1,11 +1,13 @@
 <template>
-    <div class="h-screen w-screen bg-gray-100 dark:bg-gray-900 grid grid-cols-[auto_1fr]">
+    <div class="h-screen w-screen bg-gray-100 dark:bg-gray-900 md:grid md:grid-cols-[auto_1fr]">
 
         <!-- Sidebar -->
+        <div class="absolute z-50 bg-black/50 h-screen w-full" v-if="mobileOpen" @click="mobileOpen = !mobileOpen"></div>
         <aside :class="[
-            'bg-white dark:bg-gray-800 shadow-md transition-all duration-300 relative',
+            'bg-white dark:bg-gray-800 shadow-md transition-all duration-300',
             sidebarCollapsed ? 'w-16' : 'w-60',
-            mobileOpen ? 'absolute z-50 h-full' : 'relative'
+            // Esconde no mobile por padrão, mostra no md pra cima
+            mobileOpen ? 'absolute z-50 h-full' : 'hidden md:relative md:block'
         ]" @mouseenter="toogleCollapsed(false)" @mouseleave="toogleCollapsed(true)">
 
             <!-- Logo + Seletor Empresa -->
@@ -22,21 +24,22 @@
             </div>
             <!-- Navegação -->
             <nav class="px-3 py-4 space-y-2 overflow-auto dark:text-gray-50">
-                <SidebarLink :href="`/${empresa}/dashboard`" icon="bx bx-home" label="Dashboard" :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`/${empresa}/pedidos`" icon="bx bx-cart" label="Pedidos"
+                <SidebarLink :href="`./dashboard`" icon="bx bx-home" label="Dashboard"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`/${empresa}/clientes`" icon="bx bx-user" label="Clientes"
+                <SidebarLink :href="`./pedidos`" icon="bx bx-cart" label="Pedidos"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`/${empresa}/produtos`" icon="bx bx-box" label="Produtos"
+                <SidebarLink :href="`./clientes`" icon="bx bx-user" label="Clientes"
+                    :collapsed="sidebarCollapsed" />
+                <SidebarLink :href="`./produtos`" icon="bx bx-box" label="Produtos"
                     :collapsed="sidebarCollapsed" />
             </nav>
 
             <!-- Rodapé do menu fixo no fundo -->
             <div
                 class="absolute bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-2">
-                <SidebarLink :href="`/${empresa}/b2b`" icon="bx bx-store" label="E-commerce B2B"
+                <SidebarLink :href="`./b2b`" icon="bx bx-store" label="E-commerce B2B"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`/${empresa}/conta`" icon="bx bx-cog" label="Minha Conta"
+                <SidebarLink :href="`./conta`" icon="bx bx-cog" label="Minha Conta"
                     :collapsed="sidebarCollapsed" />
             </div>
         </aside>
@@ -90,7 +93,7 @@
                             Meus Dados</Link>
                             <button @click="logout"
                                 class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">
-                            Sair</button>
+                                Sair</button>
                         </div>
                     </div>
                 </div>
@@ -109,7 +112,7 @@
 
 
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import { Link } from "@inertiajs/vue3";
 import SidebarLink from "@/components/SidebarLink.vue";
 import FormField from "@/components/FormField.vue";
@@ -123,7 +126,7 @@ const empresaIdDaUrl = Number(urlParts[0]) || (empresas.value[0]?.id || null);
 
 const empresa = ref(empresaIdDaUrl || null);
 
-const sidebarCollapsed = ref(false); // slim mode padrão
+const sidebarCollapsed = ref(false); 
 const mobileOpen = ref(false);
 const dropdownOpen = ref(false);
 const sidebarCollapsedMode = ref(false);
