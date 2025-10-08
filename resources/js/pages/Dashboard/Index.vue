@@ -130,7 +130,7 @@
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <div class="font-semibold text-gray-900 dark:text-white">{{ categoria.valor }}</div>
+                                    <div class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(categoria.valor) }}</div>
                                     <div class="text-xs flex items-center justify-end gap-1"
                                         :class="categoria.variacao >= 0 ? 'text-green-600' : 'text-red-600'">
                                         <i
@@ -161,7 +161,7 @@
                             <p class="text-xs text-gray-500">{{ venda.produto }}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm font-semibold">{{ venda.valor }}</p>
+                            <p class="text-sm font-semibold">{{ formatCurrency(venda.valor) }}</p>
                             <p class="text-xs text-gray-500">{{ venda.data }}</p>
                         </div>
                     </div>
@@ -186,7 +186,7 @@
                                 <p class="text-xs text-gray-500">{{ user.vendas }} vendas</p>
                             </div>
                         </div>
-                        <p class="text-sm font-semibold">{{ user.valor }}</p>
+                        <p class="text-sm font-semibold">{{ formatCurrency(user.valor) }}</p>
                     </div>
                 </div>
             </div>
@@ -289,7 +289,7 @@ const chartStatus = ref({
 });
 
 const chartVendas = ref({
-    series: [],     
+    series: [],
     options: {
         chart: {
             type: 'line',
@@ -301,12 +301,12 @@ const chartVendas = ref({
         },
         xaxis: {
             categories: page.props.categoriasMeses ?? [],
-            labels: { 
+            labels: {
                 style: { colors: '#374151', fontFamily: 'inherit' }
             }
         },
         yaxis: {
-            labels: { 
+            labels: {
                 style: { colors: '#374151', fontFamily: 'inherit' }
             }
         },
@@ -321,7 +321,7 @@ const chartVendas = ref({
             labels: { colors: '#374151' }
         },
         tooltip: {
-            y: { formatter: (val) => `R$ ${val.toFixed(2)}` }
+            y: { formatter: (val) => `${formatCurrency(val.toFixed(2))}` }
         },
         markers: {
           size: 4,
@@ -405,7 +405,7 @@ watch(
                 categories: newProps.categoriasMeses ?? [],
             }
         };
-        
+
         chartProdutos.value.series[0].data = newProps.produtosQtd ?? [];
         chartProdutos.value.options.xaxis.categories = newProps.produtosNomes ?? [];
 
