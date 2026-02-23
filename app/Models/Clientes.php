@@ -13,18 +13,19 @@ class Clientes extends Model
 
     protected $fillable = [
         'empresa_id', 'icms_st_id', 'tipo', 'razao_social', 'nome_fantasia', 'cnpj', 'inscricao_estadual', 'suframa',
-        'rua', 'numero', 'complemento', 'bairro', 'cep', 'municipio_codigo', 'bloqueado', 'motivo_bloqueio_id', 'observacao',
+        'rua', 'numero', 'complemento', 'bairro', 'cep', 'municipio_codigo', 'tag_id', 'segmento_id', 'rede_id', 'excecao_fiscal_id',
+        'bloqueado', 'motivo_bloqueio_id', 'observacao',
         'ultima_alteracao', 'excluido'
     ];
 
     public function empresa()
     {
-        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'empresa_id', 'id');
     }
 
     public function icms_st()
     {
-        return $this->belongsTo(Icms_st::class, 'id', 'icms_st_id');
+        return $this->belongsTo(Icms_st::class, 'icms_st_id', 'id');
     }
 
     public function motivo_bloqueio()
@@ -57,8 +58,43 @@ class Clientes extends Model
         return $this->hasMany(ClientesExtras::class, 'cliente_id', 'id');
     }
 
+    public function tag()
+    {
+        return $this->belongsTo(ClientesTags::class, 'tag_id', 'id');
+    }
+
+    public function tags()
+    {
+        return $this->belongsToMany(
+            ClientesTags::class,
+            'clientes_tags_clientes',
+            'cliente_id',
+            'tag_id'
+        )->withTimestamps();
+    }
+
+    public function segmento()
+    {
+        return $this->belongsTo(ClientesSegmentos::class, 'segmento_id', 'id');
+    }
+
+    public function rede()
+    {
+        return $this->belongsTo(ClientesRedes::class, 'rede_id', 'id');
+    }
+
+    public function excecao_fiscal()
+    {
+        return $this->belongsTo(ClientesExcecoesFiscais::class, 'excecao_fiscal_id', 'id');
+    }
+
     public function pedidos()
     {
         return $this->hasMany(Pedidos::class, 'cliente_id', 'id');
+    }
+
+    public function ibge()
+    {
+        return $this->belongsTo(CidadesIbge::class, 'municipio_codigo', 'municipio_codigo');
     }
 }
