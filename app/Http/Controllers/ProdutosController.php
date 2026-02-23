@@ -11,11 +11,18 @@ use App\Models\ProdutosDestaquesItens;
 use App\Models\ProdutosImagens;
 use App\Models\ProdutosPromocoes;
 use App\Models\ProdutosPromocoesItens;
+use App\Models\ProdutosPrecos;
+use App\Models\TabelasPrecos;
 use App\Models\Variacoes;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ProdutosController extends Controller
 {
@@ -38,6 +45,256 @@ class ProdutosController extends Controller
         return "/{$empresa}/produtos";
     }
 
+    private function dadosFormularioProduto(int|string $empresa): array
+    {
+        $categorias = Categorias::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->orderBy('nome')
+            ->get(['id', 'nome']);
+
+        $tabelasPrecos = TabelasPrecos::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->orderBy('nome')
+            ->get(['id', 'nome']);
+
+        $variacoes = Variacoes::query()
+            ->with(['variacao_itens' => fn ($q) => $q->where('excluido', false)->orderBy('nome')])
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->orderBy('ordem')
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'ordem']);
+
+        return [
+            'categorias' => $categorias,
+            'tabelas_precos' => $tabelasPrecos,
+            'variacoes' => $variacoes,
+        ];
+    }
+
+    private function produtoParaFormulario(Produtos $produto): array
+    {
+        $precosTabelas = $produto->precos
+            ->where('excluido', false)
+            ->pluck('preco', 'tabela_id')
+            ->map(fn ($valor) => (float)$valor)
+            ->toArray();
+
+        $imagemAtual = $produto->imagens
+            ->sortBy('ordem')
+            ->first();
+
+        return [
+            'id' => $produto->id,
+            'codigo' => $produto->codigo,
+            'nome' => $produto->nome,
+            'unidade' => $produto->unidade,
+            'multiplo' => $produto->multiplo,
+            'categoria_id' => $produto->categoria_id,
+            'moeda' => $produto->moeda ?: 'R$',
+            'preco_tabela' => (float)($produto->preco_tabela ?? 0),
+            'preco_minimo' => (float)($produto->preco_minimo ?? 0),
+            'precos_tabelas' => $precosTabelas,
+            'ipi' => (float)($produto->ipi ?? 0),
+            'tipo_ipi' => $produto->tipo_ipi ?: '%',
+            'comissao' => (float)($produto->comissao ?? 0),
+            'codigo_ncm' => $produto->codigo_ncm,
+            'observacoes' => $produto->observacoes,
+            'peso_dimensoes_unitario' => (bool)$produto->peso_dimensoes_unitario,
+            'peso_bruto' => $produto->peso_bruto,
+            'largura' => $produto->largura,
+            'altura' => $produto->altura,
+            'comprimento' => $produto->comprimento,
+            'ativo' => (bool)$produto->ativo,
+            'exibir_no_b2b' => (bool)$produto->exibir_no_b2b,
+            'imagem_base64' => $imagemAtual?->imagem_base64,
+            'imagens' => $produto->imagens
+                ->sortBy(fn ($img) => sprintf('%010d-%010d', (int)$img->ordem, (int)$img->id))
+                ->values()
+                ->map(fn ($img) => [
+                    'id' => $img->id,
+                    'imagem_base64' => $img->imagem_base64,
+                    'ordem' => $img->ordem,
+                    'created_at' => $img->created_at,
+                ])
+                ->all(),
+        ];
+    }
+
+    private function regrasValidacaoProduto(int|string $empresa, ?int $produtoId = null): array
+    {
+        return [
+            'codigo' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('produtos', 'codigo')
+                    ->where(fn ($q) => $q
+                        ->where('empresa_id', (int)$empresa)
+                        ->where('excluido', false))
+                    ->ignore($produtoId),
+            ],
+            'nome' => ['required', 'string', 'max:255'],
+            'unidade' => ['nullable', 'string', 'max:10'],
+            'multiplo' => ['nullable', 'integer', 'min:1'],
+            'moeda' => ['nullable', 'string', 'max:5'],
+            'preco_tabela' => ['required', 'numeric', 'min:0'],
+            'preco_minimo' => ['nullable', 'numeric', 'min:0'],
+            'precos_tabelas' => ['nullable', 'array'],
+            'precos_tabelas.*' => ['nullable', 'numeric', 'min:0'],
+            'ipi' => ['nullable', 'numeric', 'min:0'],
+            'tipo_ipi' => ['nullable', 'string', 'max:5'],
+            'comissao' => ['nullable', 'numeric', 'min:0'],
+            'codigo_ncm' => ['nullable', 'string', 'max:20'],
+            'observacoes' => ['nullable', 'string'],
+            'peso_dimensoes_unitario' => ['nullable', 'boolean'],
+            'peso_bruto' => ['nullable', 'numeric', 'min:0'],
+            'largura' => ['nullable', 'numeric', 'min:0'],
+            'altura' => ['nullable', 'numeric', 'min:0'],
+            'comprimento' => ['nullable', 'numeric', 'min:0'],
+            'exibir_no_b2b' => ['nullable', 'boolean'],
+            'ativo' => ['nullable', 'boolean'],
+            'categoria_id' => [
+                'nullable',
+                Rule::exists('categorias', 'id')->where(fn ($q) => $q
+                    ->where('empresa_id', (int)$empresa)
+                    ->where('excluido', false)),
+            ],
+            'imagem' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
+            'imagens' => ['nullable', 'array'],
+            'imagens.*' => ['file', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
+        ];
+    }
+
+    private function syncImagemProduto(int|string $empresa, int $produtoId, ?UploadedFile $imagem): void
+    {
+        if (!$imagem) {
+            return;
+        }
+
+        $mime = $imagem->getMimeType() ?: 'image/jpeg';
+        $base64 = 'data:' . $mime . ';base64,' . base64_encode($imagem->get());
+
+        ProdutosImagens::query()->updateOrCreate(
+            [
+                'empresa_id' => (int)$empresa,
+                'produto_id' => $produtoId,
+                'ordem' => 0,
+            ],
+            [
+                'imagem_base64' => $base64,
+            ]
+        );
+    }
+
+    private function addImagensProduto(int|string $empresa, int $produtoId, array $imagens): void
+    {
+        if (empty($imagens)) {
+            return;
+        }
+
+        $ordem = (int) ProdutosImagens::query()
+            ->where('empresa_id', $empresa)
+            ->where('produto_id', $produtoId)
+            ->max('ordem');
+
+        foreach ($imagens as $imagem) {
+            $mime = $imagem->getMimeType() ?: 'image/jpeg';
+            $base64 = 'data:' . $mime . ';base64,' . base64_encode($imagem->get());
+            $ordem++;
+
+            ProdutosImagens::create([
+                'empresa_id' => (int)$empresa,
+                'produto_id' => $produtoId,
+                'imagem_base64' => $base64,
+                'ordem' => $ordem,
+            ]);
+        }
+    }
+
+    private function listarImagensProduto(int|string $empresa, int $produtoId): array
+    {
+        return ProdutosImagens::query()
+            ->where('empresa_id', $empresa)
+            ->where('produto_id', $produtoId)
+            ->orderBy('ordem')
+            ->orderBy('id')
+            ->get(['id', 'imagem_base64', 'ordem', 'created_at'])
+            ->toArray();
+    }
+
+    private function mapearPayloadProduto(array $validated): array
+    {
+        return [
+            'codigo' => $validated['codigo'],
+            'nome' => $validated['nome'],
+            'unidade' => $validated['unidade'] ?? null,
+            'multiplo' => $validated['multiplo'] ?? null,
+            'moeda' => $validated['moeda'] ?? 'R$',
+            'preco_tabela' => $validated['preco_tabela'],
+            'preco_minimo' => $validated['preco_minimo'] ?? null,
+            'ipi' => $validated['ipi'] ?? null,
+            'tipo_ipi' => $validated['tipo_ipi'] ?? null,
+            'comissao' => $validated['comissao'] ?? null,
+            'codigo_ncm' => $validated['codigo_ncm'] ?? null,
+            'observacoes' => $validated['observacoes'] ?? null,
+            'peso_dimensoes_unitario' => (bool)($validated['peso_dimensoes_unitario'] ?? true),
+            'peso_bruto' => $validated['peso_bruto'] ?? null,
+            'largura' => $validated['largura'] ?? null,
+            'altura' => $validated['altura'] ?? null,
+            'comprimento' => $validated['comprimento'] ?? null,
+            'exibir_no_b2b' => (bool)($validated['exibir_no_b2b'] ?? false),
+            'ativo' => (bool)($validated['ativo'] ?? true),
+            'categoria_id' => $validated['categoria_id'] ?? null,
+            'ultima_alteracao' => now(),
+        ];
+    }
+
+    private function syncPrecosTabela(int|string $empresa, int $produtoId, array $precosTabelas): void
+    {
+        $tabelasIds = TabelasPrecos::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->pluck('id')
+            ->all();
+
+        $ativos = [];
+
+        foreach ($tabelasIds as $tabelaId) {
+            $valor = $precosTabelas[$tabelaId] ?? $precosTabelas[(string)$tabelaId] ?? null;
+
+            if ($valor === null || $valor === '') {
+                continue;
+            }
+
+            $ativo = ProdutosPrecos::query()->updateOrCreate(
+                [
+                    'empresa_id' => (int)$empresa,
+                    'produto_id' => $produtoId,
+                    'tabela_id' => (int)$tabelaId,
+                ],
+                [
+                    'preco' => $valor,
+                    'excluido' => false,
+                    'ultima_alteracao' => now(),
+                ]
+            );
+
+            $ativos[] = $ativo->id;
+        }
+
+        ProdutosPrecos::query()
+            ->where('empresa_id', $empresa)
+            ->where('produto_id', $produtoId)
+            ->when(!empty($ativos), fn ($q) => $q->whereNotIn('id', $ativos))
+            ->update([
+                'excluido' => true,
+                'ultima_alteracao' => now(),
+            ]);
+    }
+
     public function index($empresa)
     {
         $this->validarAcessoEmpresa($empresa);
@@ -49,7 +306,12 @@ class ProdutosController extends Controller
         $produtos = Produtos::with([
             'imagens',
             'categorias',
-            'precos.tabelas',
+            'precos' => fn ($q) => $q
+                ->where('empresa_id', $empresa)
+                ->where('excluido', false)
+                ->with(['tabelas' => fn ($t) => $t
+                    ->where('empresa_id', $empresa)
+                    ->where('excluido', false)]),
             'grades.variacoes',
         ])
             ->where('empresa_id', $empresa)
@@ -62,6 +324,12 @@ class ProdutosController extends Controller
             ->where('excluido', false)
             ->orderBy('nome')
             ->get();
+
+        $tabelasPrecos = TabelasPrecos::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->orderBy('nome')
+            ->get(['id', 'nome']);
 
         $variacoes = Variacoes::query()
             ->with(['variacao_itens' => fn($q) => $q->where('excluido', false)->orderBy('nome')])
@@ -126,6 +394,7 @@ class ProdutosController extends Controller
             'produtos' => $produtos,
             'empresa_selecionada' => (int)$empresa,
             'categorias' => $categorias,
+            'tabelas_precos' => $tabelasPrecos,
             'variacoes' => $variacoes,
             'tributacoes' => $tributacoes,
             'promocoes' => $promocoes,
@@ -138,49 +407,109 @@ class ProdutosController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function create($empresa): Response
     {
-        $request->validate([
-            'empresa_id' => 'required|exists:empresas,id',
-            'nome' => 'required|string|max:255',
-            'categoria_id' => 'nullable|exists:categorias,id',
-            'codigo' => 'nullable|string|max:255',
-            'preco_tabela' => 'nullable|numeric',
-            'preco_minimo' => 'nullable|numeric',
+        $this->validarAcessoEmpresa($empresa);
+
+        return Inertia::render('Produtos/Form', [
+            'empresa_id' => (int)$empresa,
+            'is_edit' => false,
+            'produto' => null,
+            ...$this->dadosFormularioProduto($empresa),
+        ]);
+    }
+
+    public function store(Request $request, $empresa): RedirectResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $validated = $request->validate($this->regrasValidacaoProduto($empresa));
+
+        $produto = DB::transaction(function () use ($empresa, $validated, $request) {
+            $produtoCriado = Produtos::create([
+                'empresa_id' => (int)$empresa,
+                ...$this->mapearPayloadProduto($validated),
+                'excluido' => false,
+            ]);
+
+            $this->syncPrecosTabela($empresa, (int)$produtoCriado->id, $validated['precos_tabelas'] ?? []);
+            $this->syncImagemProduto($empresa, (int)$produtoCriado->id, request()->file('imagem'));
+            $this->addImagensProduto($empresa, (int)$produtoCriado->id, $request->file('imagens', []));
+
+            return $produtoCriado;
+        });
+
+        return redirect("/{$empresa}/produtos/{$produto->id}/edit")
+            ->with('success', 'Produto cadastrado com sucesso.');
+    }
+
+    public function show($empresa, $produto): RedirectResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+        return redirect("/{$empresa}/produtos/{$produto}/edit");
+    }
+
+    public function edit($empresa, $produto): Response
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $produtoModel = Produtos::query()
+            ->with([
+                'precos' => fn ($q) => $q->where('excluido', false),
+                'imagens',
+            ])
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->findOrFail($produto);
+
+        return Inertia::render('Produtos/Form', [
+            'empresa_id' => (int)$empresa,
+            'is_edit' => true,
+            'produto' => $this->produtoParaFormulario($produtoModel),
+            ...$this->dadosFormularioProduto($empresa),
+        ]);
+    }
+
+    public function update(Request $request, $empresa, $produto): RedirectResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $produtoModel = Produtos::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->findOrFail($produto);
+
+        $validated = $request->validate(
+            $this->regrasValidacaoProduto($empresa, (int)$produtoModel->id)
+        );
+
+        DB::transaction(function () use ($produtoModel, $validated, $empresa, $request) {
+            $produtoModel->update($this->mapearPayloadProduto($validated));
+            $this->syncPrecosTabela($empresa, (int)$produtoModel->id, $validated['precos_tabelas'] ?? []);
+            $this->syncImagemProduto($empresa, (int)$produtoModel->id, request()->file('imagem'));
+            $this->addImagensProduto($empresa, (int)$produtoModel->id, $request->file('imagens', []));
+        });
+
+        return back()->with('success', 'Produto atualizado com sucesso.');
+    }
+
+    public function destroy($empresa, $produto): RedirectResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $produtoModel = Produtos::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->findOrFail($produto);
+
+        $produtoModel->update([
+            'excluido' => true,
+            'ativo' => false,
+            'ultima_alteracao' => now(),
         ]);
 
-        $produto = Produtos::create($request->all());
-        return response()->json($produto, 201);
-    }
-
-    public function show($id)
-    {
-        $produto = Produtos::with([
-            'categorias',
-            'precos',
-            'grades.variacoes',
-        ])
-            ->findOrFail($id);
-
-        return response()->json($produto);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $produto = Produtos::findOrFail($id);
-        $produto->fill($request->all());
-        $produto->ultima_alteracao = now();
-        $produto->save();
-
-        return response()->json($produto);
-    }
-
-    public function destroy($id)
-    {
-        $produto = Produtos::findOrFail($id);
-        $produto->delete();
-
-        return response()->json(['message' => 'Produto deletado com sucesso']);
+        return redirect("/{$empresa}/produtos")
+            ->with('success', 'Produto excluido com sucesso.');
     }
 
     public function importarFotos(Request $request, $empresa)
@@ -233,6 +562,115 @@ class ProdutosController extends Controller
             ->delete();
 
         return back()->with('success', 'Todas as imagens foram excluidas.');
+    }
+
+    public function storeImagemProduto(Request $request, $empresa, $produto)
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $produtoModel = Produtos::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->findOrFail($produto);
+
+        $validated = $request->validate([
+            'imagens' => ['required', 'array', 'min:1'],
+            'imagens.*' => ['file', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
+        ]);
+
+        $this->addImagensProduto($empresa, (int)$produtoModel->id, $validated['imagens']);
+
+        return response()->json([
+            'success' => true,
+            'imagens' => $this->listarImagensProduto($empresa, (int)$produtoModel->id),
+        ]);
+    }
+
+    public function updateOrdenacaoImagensProduto(Request $request, $empresa, $produto)
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $produtoModel = Produtos::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->findOrFail($produto);
+
+        $validated = $request->validate([
+            'imagens' => ['required', 'array', 'min:1'],
+            'imagens.*.id' => ['required', 'integer'],
+            'imagens.*.ordem' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $ids = collect($validated['imagens'])->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $existentes = ProdutosImagens::query()
+            ->where('empresa_id', $empresa)
+            ->where('produto_id', $produtoModel->id)
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (count($existentes) !== count($ids)) {
+            abort(422, 'Uma ou mais imagens informadas nao pertencem ao produto.');
+        }
+
+        DB::transaction(function () use ($validated, $empresa, $produtoModel) {
+            foreach ($validated['imagens'] as $img) {
+                ProdutosImagens::query()
+                    ->where('empresa_id', $empresa)
+                    ->where('produto_id', $produtoModel->id)
+                    ->where('id', (int)$img['id'])
+                    ->update(['ordem' => (int)$img['ordem']]);
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'imagens' => $this->listarImagensProduto($empresa, (int)$produtoModel->id),
+        ]);
+    }
+
+    public function destroyImagemProduto($empresa, $produto, $imagem)
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $produtoModel = Produtos::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->findOrFail($produto);
+
+        $imagemModel = ProdutosImagens::query()
+            ->where('empresa_id', $empresa)
+            ->where('produto_id', $produtoModel->id)
+            ->findOrFail($imagem);
+
+        $imagemModel->delete();
+
+        return response()->json([
+            'success' => true,
+            'imagens' => $this->listarImagensProduto($empresa, (int)$produtoModel->id),
+        ]);
+    }
+
+    public function updateTabelaPreco(Request $request, $empresa, $tabela): RedirectResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $validated = $request->validate([
+            'nome' => ['required', 'string', 'max:255'],
+        ]);
+
+        $tabelaModel = TabelasPrecos::query()
+            ->where('empresa_id', $empresa)
+            ->where('excluido', false)
+            ->findOrFail($tabela);
+
+        $tabelaModel->update([
+            'nome' => $validated['nome'],
+            'ultima_alteracao' => now(),
+        ]);
+
+        return back()->with('success', 'Nome da tabela de preco atualizado com sucesso.');
     }
 
     public function storeCategoria(Request $request, $empresa)
