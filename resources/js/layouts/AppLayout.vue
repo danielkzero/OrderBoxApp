@@ -142,10 +142,22 @@ function toogleCollapsed(valor) {
 }
 
 watch(empresa, (novaEmpresa) => {
-    if (novaEmpresa) {
-        empresa.value = novaEmpresa;
-        window.location.href = `/${novaEmpresa}/dashboard`;
+    if (!novaEmpresa) return;
+
+    const novaEmpresaId = Number(novaEmpresa);
+    if (!novaEmpresaId) return;
+
+    const current = new URL(window.location.href);
+    const parts = current.pathname.split('/').filter(Boolean);
+
+    if (parts.length > 0 && /^\d+$/.test(parts[0])) {
+        parts[0] = String(novaEmpresaId);
+    } else {
+        parts.unshift(String(novaEmpresaId), 'dashboard');
     }
+
+    const novoPath = `/${parts.join('/')}${current.search}${current.hash}`;
+    window.location.href = novoPath;
 });
 
 function logout() {
