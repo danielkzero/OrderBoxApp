@@ -19,5 +19,14 @@ class ClientesTags extends Model
         'excluido',
         'ultima_alteracao',
     ];
-}
 
+    public function clientes()
+    {
+        return $this->belongsToMany(
+            Clientes::class,
+            'clientes_tags_clientes',
+            'tag_id',
+            'cliente_id'
+        )->withTimestamps();
+    }
+}
