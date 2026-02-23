@@ -17,11 +17,11 @@ class ProdutosImagens extends Model
 
     public function produto()
     {
-        return $this->belongsTo(Produtos::class, 'id', 'produto_id');
+        return $this->belongsTo(Produtos::class, 'produto_id', 'id');
     }
 
     public function empresa()
     {
-        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'empresa_id', 'id');
     }
 }
