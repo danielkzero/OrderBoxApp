@@ -30,7 +30,7 @@ class PedidosFactory extends Factory
             'valor_frete' => $this->faker->optional()->randomFloat(2, 10, 200),
             'total' => $this->faker->randomFloat(2, 100, 5000),
             'transportadora_nome' => $this->faker->company,
-            'data_emissao' => $this->faker->date(),
+            'data_emissao' => $this->faker->dateTimeBetween('-2 years', 'now'),
             'data_criacao' => now(),
             'ultima_alteracao' => now(),
             'criador_id' => \App\Models\Users::inRandomOrder()->first()->id ?? null,

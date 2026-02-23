@@ -27,7 +27,7 @@ const page = usePage();
 
 // Verifica se a rota atual é igual ao href do menu
 const isActive = computed(() => {
-  const url = page.url.split('/').filter(Boolean);
+  const url = page.url.split(/[/?]/).filter(Boolean);
   return './' + url[1] === props.href
 });
 </script>

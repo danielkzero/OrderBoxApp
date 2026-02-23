@@ -15,5 +15,5 @@ Aplicativo para lançamentos e gestão de pedidos, desenvolvido em Laravel + Ine
 - **API Rest:** API REST Laravel
 
 ## Documentação de desenvolvimento
-- **docs:** Documentação geral -> caminho: root/docs/. (changelog, api, arquitetura, base_de_dados e etc)
-- **devlog:** Logs de desenvolvimento -> caminho: root/docs/devlog.
+- **docs:** Documentação geral -> caminho: (./docs/) "changelog, api, arquitetura, base_de_dados e etc"
+- **devlog:** Logs de desenvolvimento -> caminho: (./docs/devlog/)

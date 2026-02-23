@@ -8,8 +8,8 @@
                     :class="activeMainTab === tab.name
                         ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'">
-                    <i :class="tab.icon + ' text-lg'"></i>
-                    <span>{{ tab.name }}</span>
+                <i :class="tab.icon + ' text-lg'"></i>
+                <span>{{ tab.name }}</span>
                 </Link>
             </nav>
         </div>
@@ -19,13 +19,14 @@
             <!-- Sub-tabs Produtos -->
             <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
                 <nav class="flex space-x-2">
-                    <Link :href="sub.url" v-for="sub in produtosTabs" :key="sub.name" @click="activeProdutosTab = sub.name"
+                    <Link :href="sub.url" v-for="sub in produtosTabs" :key="sub.name"
+                        @click="activeProdutosTab = sub.name"
                         class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
                         :class="activeProdutosTab === sub.name
                             ? 'text-indigo-700 dark:text-white border-b-2'
                             : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'">
-                        <i :class="sub.icon + ' text-base'"></i>
-                        <span>{{ sub.name }}</span>
+                    <i :class="sub.icon + ' text-base'"></i>
+                    <span>{{ sub.name }}</span>
                     </Link>
                 </nav>
             </div>
@@ -52,25 +53,10 @@
                                         class="border-2 border-white rounded-xl shadow-sm w-10" />
                                 </div>
                             </template>
-                            <template v-for="tabela in tabelasPrecos" #[`header-tabela_${tabela.id}`] :key="`header-${tabela.id}`">
-                                <div class="min-w-[140px]" @click.stop>
-                                    <button v-if="editingTabelaId !== tabela.id" type="button"
-                                        class="hover:underline text-left"
-                                        @click="iniciarEdicaoTabela(tabela)">
-                                        {{ tabela.nome || `Tabela ${tabela.id}` }}
-                                    </button>
-                                    <input v-else v-model="editingTabelaNome" type="text"
-                                        class="w-full border border-indigo-400 rounded px-2 py-1 text-xs text-gray-900"
-                                        :disabled="savingTabelaId === tabela.id"
-                                        @keyup.enter.prevent="salvarEdicaoTabela(tabela.id)"
-                                        @keyup.esc.prevent="cancelarEdicaoTabela"
-                                        @blur="cancelarEdicaoTabela" />
-                                </div>
-                            </template>
-                            <template v-for="tabela in tabelasPrecos" #[`cell-tabela_${tabela.id}`]="{ row }"
-                                :key="tabela.id">
+                            <template v-for="p in (produtos[0]?.precos || 0)" #[`cell-tabela_${p.tabela_id}`]="{ row }"
+                                :key="p.tabela_id">
                                 <span class="font-medium text-green-600">
-                                    {{ formatCurrency(row[`tabela_${tabela.id}`]) }}
+                                    {{ formatCurrency(row[`tabela_${p.tabela_id}`]) }}
                                 </span>
                             </template>
                         </DataTable>
@@ -100,9 +86,9 @@
                                 ou clique para selecionar arquivos do computador
                             </p>
                             <p class="text-xs mt-2 text-gray-500 dark:text-gray-500">
-                                Caso o nome do arquivo for o cÃ³digo de um produto ele automaticamente serÃ¡ atribuÃ­do ao mesmo.<br />
-                                Formatos aceitos: JPG, JPEG, PNG, GIF &nbsp;â€¢&nbsp; MÃ¡x: 2MB por imagem. <br />
-                                DimensÃ£o recomendada: 800 x 800 pixels<br />
+                                Caso o nome do arquivo for o código de um produto ele automaticamente será atribuído ao mesmo.<br />
+                                Formatos aceitos: JPG, JPEG, PNG, GIF &nbsp;•&nbsp; Máx: 2MB por imagem. <br />
+                                Dimensão recomendada: 800 x 800 pixels<br />
                             </p>
                         </div>
 
@@ -135,8 +121,8 @@
                         :class="activeConfigTab === sub.name
                             ? 'text-indigo-700 dark:text-white border-b-2'
                             : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'">
-                        <i :class="sub.icon + ' text-base'"></i>
-                        <span>{{ sub.name }}</span>
+                    <i :class="sub.icon + ' text-base'"></i>
+                    <span>{{ sub.name }}</span>
                     </Link>
                 </nav>
             </div>
@@ -211,6 +197,30 @@ const configTabs = [
 ];
 const activeConfigTab = ref("Categorias");
 
+const allTabelaIds = [
+    ...new Set(
+        produtos.value.flatMap(produto =>
+            (produto.precos || []).map(p => p.tabela_id)
+        )
+    ),
+];
+
+// Criar um mapeamento id → nome para poder ordenar alfabeticamente
+const tabelaNamesMap = {};
+produtos.value.forEach(produto => {
+  (produto.precos || []).forEach(p => {
+    if (p.tabelas?.nome) tabelaNamesMap[p.tabela_id] = p.tabelas.nome;
+  });
+});
+
+// Ordena os IDs pelo nome da tabela
+allTabelaIds.sort((a, b) => {
+  const nameA = tabelaNamesMap[a] || `Tabela ${a}`;
+  const nameB = tabelaNamesMap[b] || `Tabela ${b}`;
+  return nameA.localeCompare(nameB);
+});
+
+
 const columns = computed(() => [
     { label: "Fotos", key: "fotos" },
     { label: "Código", key: "codigo" },
@@ -221,74 +231,39 @@ const columns = computed(() => [
     { label: "Comissão", key: "comissao" },
     { label: "Preço Mínimo", key: "preco_minimo" },
     { label: "Preço Tabela", key: "preco_tabela" },
-    ...tabelasPrecos.value.map((tabela) => ({
-        label: tabela.nome || `Tabela ${tabela.id}`,
-        key: `tabela_${tabela.id}`,
-        sortable: false,
-    })),
-]);
+    ...produtos.value.length
+        ? (produtos.value[0].precos || []).map(p => ({
+            label: p.tabelas?.nome || `Tabela ${p.tabela_id}`,
+            key: `tabela_${p.tabela_id}`
+        }))
+        : [],
+];
 
-const produtosNormalizados = computed(() =>
-    produtos.value.map((produto) => {
-        const precosObj = {};
-        tabelasPrecos.value.forEach((tabela) => {
-            precosObj[`tabela_${tabela.id}`] = null;
-        });
-
-        (produto.precos || []).forEach((p) => {
-            precosObj[`tabela_${p.tabela_id}`] = p.preco;
-        });
-
-        return { ...produto, ...precosObj };
-    })
-);
+const produtosNormalizados = produtos.value.map(produto => {
+    const precosObj = {};
+    (produto.precos || []).forEach(p => {
+        precosObj[`tabela_${p.tabela_id}`] = p.preco;
+    });
+    return { ...produto, ...precosObj };
+});
 
 function triggerFileInput() {
-    fileInput.value?.click();
+  fileInput.value?.click()
 }
 
 function handleFiles(event) {
-    const files = event.target.files;
-    if (!files.length) return;
-    console.log("Arquivos selecionados:", files);
+  const files = event.target.files
+  if (!files.length) return
+  console.log('Arquivos selecionados:', files)
+  // aqui você pode enviar para o servidor ou exibir previews
 }
 
 function handleDrop(event) {
-    isDragging.value = false;
-    const files = event.dataTransfer.files;
-    if (!files.length) return;
-    console.log("Arquivos arrastados:", files);
-}
-
-function iniciarEdicaoTabela(tabela) {
-    editingTabelaId.value = tabela.id;
-    editingTabelaNome.value = tabela.nome || "";
-}
-
-function cancelarEdicaoTabela() {
-    editingTabelaId.value = null;
-    editingTabelaNome.value = "";
-}
-
-function salvarEdicaoTabela(tabelaId) {
-    const nome = editingTabelaNome.value.trim();
-    if (!nome) {
-        cancelarEdicaoTabela();
-        return;
-    }
-
-    savingTabelaId.value = tabelaId;
-
-    router.put(`/${empresaId}/produtos/tabelas-precos/${tabelaId}`, { nome }, {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => {
-            cancelarEdicaoTabela();
-        },
-        onFinish: () => {
-            savingTabelaId.value = null;
-        },
-    });
+  isDragging.value = false
+  const files = event.dataTransfer.files
+  if (!files.length) return
+  console.log('Arquivos arrastados:', files)
+  // também pode tratar o upload aqui
 }
 </script>
 

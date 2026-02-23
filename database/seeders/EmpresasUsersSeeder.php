@@ -13,10 +13,14 @@ class EmpresasUsersSeeder extends Seeder
      */
     public function run(): void
     {
-        $empresas = EmpresasUsers::factory()->create([
+        EmpresasUsers::factory()->create([
             'user_id' => 1,
             'empresa_id' => 1,
         ]);
-        EmpresasUsers::factory()->count(50)->create();
+        EmpresasUsers::factory()->create([
+            'user_id' => 1,
+            'empresa_id' => 2,
+        ]);
+        EmpresasUsers::factory()->count(2)->create();
     }
 }

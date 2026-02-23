@@ -15,24 +15,31 @@ class EmpresasSeeder extends Seeder
     {
         $faker = Faker::create();
 
-        $empresas = Empresas::factory()->create([
+        Empresas::factory()->create([
             'nome' => 'Hydra Digital',
             'cnpj' => $faker->numerify('##.###.###/####-##'),
             'inscricao_estadual' => $faker->numerify('#########'),
             'excluido' => 0,
         ]);
-        // cria 10 empresas "raiz"
-        $empresas = Empresas::factory()
-            ->count(10)
+
+        Empresas::factory()->create([
+            'nome' => 'OrderBox',
+            'cnpj' => $faker->numerify('##.###.###/####-##'),
+            'inscricao_estadual' => $faker->numerify('#########'),
+            'excluido' => 0,
+        ]);
+
+        /*$empresas = Empresas::factory()
+            ->count(6)
             ->create();
 
         // para cada empresa raiz, cria 1 a 3 filiais (que apontam para a raiz)
-        $empresas->each(function ($empresa) {
+        /*$empresas->each(function ($empresa) {
             Empresas::factory()
                 ->count(rand(1, 3))
                 ->create([
                     'empresa_id' => $empresa->id,
                 ]);
-        });
+        });*/
     }
 }
