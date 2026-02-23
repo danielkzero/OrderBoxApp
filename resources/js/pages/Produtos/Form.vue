@@ -233,6 +233,10 @@
           </div>
         </div>
 
+        <div v-if="modalErro" class="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ modalErro }}
+        </div>
+
         <input
           ref="inputGaleriaRef"
           type="file"
@@ -323,6 +327,7 @@ const openImagensModal = ref(false);
 const uploadingImagens = ref(false);
 const salvandoOrdenacao = ref(false);
 const removendoImagemId = ref(null);
+const modalErro = ref('');
 const imagensPendentes = ref([]);
 const galeriaImagens = ref(Array.isArray(produto?.imagens) ? produto.imagens : []);
 
@@ -419,6 +424,7 @@ function salvar(cadastrarOutro = false) {
 }
 
 function abrirModalImagens() {
+  modalErro.value = '';
   openImagensModal.value = true;
 }
 
@@ -448,6 +454,7 @@ async function onSelecionarImagens(event) {
 }
 
 async function uploadImagensEdicao(arquivos) {
+  modalErro.value = '';
   const previewsTemporarios = await Promise.all(
     arquivos.map(async (arquivo, idx) => ({
       uid: `uploading-${Date.now()}-${idx}`,
@@ -463,12 +470,14 @@ async function uploadImagensEdicao(arquivos) {
 
   try {
     const formData = new FormData();
+    formData.append('_token', obterCsrfToken());
     arquivos.forEach((arquivo) => formData.append('imagens[]', arquivo));
 
     const resposta = await fetch(`/${empresaId}/produtos/${produto.id}/imagens`, {
       method: 'POST',
       headers: {
         'X-CSRF-TOKEN': obterCsrfToken(),
+        'X-XSRF-TOKEN': obterXsrfTokenCookie(),
         'X-Requested-With': 'XMLHttpRequest',
         Accept: 'application/json',
       },
@@ -476,18 +485,22 @@ async function uploadImagensEdicao(arquivos) {
       body: formData,
     });
 
-    if (!resposta.ok) throw new Error('Falha ao enviar imagens');
+    if (!resposta.ok) {
+      throw new Error(await obterMensagemErroResposta(resposta, 'Falha ao enviar imagens'));
+    }
 
     const json = await resposta.json();
     galeriaImagens.value = Array.isArray(json.imagens) ? json.imagens : galeriaImagens.value;
   } catch (e) {
     galeriaImagens.value = galeriaImagens.value.filter((img) => !img.uploading);
+    modalErro.value = e?.message || 'Nao foi possivel enviar as imagens.';
   } finally {
     uploadingImagens.value = false;
   }
 }
 
 async function removerImagem(img) {
+  modalErro.value = '';
   if (img.pendente) {
     const idx = Number(img.pendenteIndex);
     if (idx >= 0) imagensPendentes.value.splice(idx, 1);
@@ -504,16 +517,25 @@ async function removerImagem(img) {
       method: 'DELETE',
       headers: {
         'X-CSRF-TOKEN': obterCsrfToken(),
+        'X-XSRF-TOKEN': obterXsrfTokenCookie(),
         'X-Requested-With': 'XMLHttpRequest',
         Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
       credentials: 'same-origin',
+      body: JSON.stringify({
+        _token: obterCsrfToken(),
+      }),
     });
 
-    if (!resposta.ok) throw new Error('Falha ao remover imagem');
+    if (!resposta.ok) {
+      throw new Error(await obterMensagemErroResposta(resposta, 'Falha ao remover imagem'));
+    }
 
     const json = await resposta.json();
     galeriaImagens.value = Array.isArray(json.imagens) ? json.imagens : galeriaImagens.value;
+  } catch (e) {
+    modalErro.value = e?.message || 'Nao foi possivel remover a imagem.';
   } finally {
     removendoImagemId.value = null;
   }
@@ -542,6 +564,7 @@ async function moverImagem(index, deslocamento) {
 }
 
 async function salvarOrdenacaoImagens() {
+  modalErro.value = '';
   const payload = galeriaImagens.value
     .filter((img) => img.id)
     .map((img, idx) => ({ id: img.id, ordem: idx }));
@@ -555,18 +578,26 @@ async function salvarOrdenacaoImagens() {
       method: 'PUT',
       headers: {
         'X-CSRF-TOKEN': obterCsrfToken(),
+        'X-XSRF-TOKEN': obterXsrfTokenCookie(),
         'X-Requested-With': 'XMLHttpRequest',
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
       credentials: 'same-origin',
-      body: JSON.stringify({ imagens: payload }),
+      body: JSON.stringify({
+        _token: obterCsrfToken(),
+        imagens: payload,
+      }),
     });
 
-    if (!resposta.ok) throw new Error('Falha ao ordenar imagens');
+    if (!resposta.ok) {
+      throw new Error(await obterMensagemErroResposta(resposta, 'Falha ao ordenar imagens'));
+    }
 
     const json = await resposta.json();
     galeriaImagens.value = Array.isArray(json.imagens) ? json.imagens : galeriaImagens.value;
+  } catch (e) {
+    modalErro.value = e?.message || 'Nao foi possivel salvar a ordenacao.';
   } finally {
     salvandoOrdenacao.value = false;
   }
@@ -586,6 +617,15 @@ function obterCsrfToken() {
   return meta?.getAttribute('content') || '';
 }
 
+function obterXsrfTokenCookie() {
+  const cookie = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('XSRF-TOKEN='));
+
+  if (!cookie) return '';
+  return decodeURIComponent(cookie.split('=')[1] || '');
+}
+
 function formatarDataImagem(valor) {
   if (!valor) return 'Aguardando upload';
   try {
@@ -599,6 +639,25 @@ function formatarDataImagem(valor) {
   } catch {
     return valor;
   }
+}
+
+async function obterMensagemErroResposta(resposta, prefixo) {
+  try {
+    const contentType = resposta.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const json = await resposta.json();
+      const erroValidacao = json?.errors ? Object.values(json.errors).flat().join(' ') : null;
+      const mensagem = erroValidacao || json?.message;
+      if (mensagem) return `${mensagem} (${resposta.status})`;
+    } else {
+      const texto = (await resposta.text())?.trim();
+      if (texto) return `${texto.slice(0, 180)} (${resposta.status})`;
+    }
+  } catch (_) {
+    // ignora falha de parse e aplica fallback
+  }
+
+  return `${prefixo} (${resposta.status})`;
 }
 </script>
 
