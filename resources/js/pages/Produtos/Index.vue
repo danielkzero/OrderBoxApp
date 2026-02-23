@@ -14,7 +14,7 @@
             </nav>
         </div>
 
-        <!-- Conteúdo Produtos -->
+        <!-- ConteÃºdo Produtos -->
         <div v-if="activeMainTab === 'Produtos'">
             <!-- Sub-tabs Produtos -->
             <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
@@ -30,26 +30,47 @@
                 </nav>
             </div>
 
-            <!-- Conteúdo das sub-tabs Produtos -->
+            <!-- ConteÃºdo das sub-tabs Produtos -->
             <div class="mt-4">
                 <div v-if="activeProdutosTab === 'Produtos e Tabelas'">
                     <div class="flex space-x-2 mb-3">
-                        <ButtonCustom icon="bx-plus" text="Cadastrar produto" url="/produtos/create" :outline="false" />
-                        <ButtonCustom icon="bx-import" text="Importar produtos" url="/produtos/import"
+                        <ButtonCustom icon="bx-plus" text="Cadastrar produto" :url="`/${empresaId}/produtos/create`" :outline="false" />
+                        <ButtonCustom icon="bx-import" text="Importar produtos" :url="`/${empresaId}/produtos/import`"
                             :outline="true" />
                     </div>
                     <div class="text-gray-800 dark:text-gray-50">
                         <DataTable :columns="columns" :data="produtosNormalizados">
-                            <template #cell-fotos="{ row }">
+                            <template #cell-nome="{ row }">
+                                <Link :href="`/${empresaId}/produtos/${row.id}/edit`"
+                                    class="font-medium text-indigo-700 hover:underline">
+                                {{ row.nome }}
+                                </Link>
+                            </template>
+                            <template #cell-fotos="{ row }">                                
                                 <div v-if="row?.imagens[0]">
                                     <img :src="row.imagens[0].imagem_base64"
                                         class="border-2 border-white rounded-xl shadow-sm w-10" />
                                 </div>
                             </template>
-                            <template v-for="p in (produtos[0]?.precos || 0)" #[`cell-tabela_${p.tabela_id}`]="{ row }"
-                                :key="p.tabela_id">
+                            <template v-for="tabela in tabelasPrecos" #[`header-tabela_${tabela.id}`] :key="`header-${tabela.id}`">
+                                <div class="min-w-[140px]" @click.stop>
+                                    <button v-if="editingTabelaId !== tabela.id" type="button"
+                                        class="hover:underline text-left"
+                                        @click="iniciarEdicaoTabela(tabela)">
+                                        {{ tabela.nome || `Tabela ${tabela.id}` }}
+                                    </button>
+                                    <input v-else v-model="editingTabelaNome" type="text"
+                                        class="w-full border border-indigo-400 rounded px-2 py-1 text-xs text-gray-900"
+                                        :disabled="savingTabelaId === tabela.id"
+                                        @keyup.enter.prevent="salvarEdicaoTabela(tabela.id)"
+                                        @keyup.esc.prevent="cancelarEdicaoTabela"
+                                        @blur="cancelarEdicaoTabela" />
+                                </div>
+                            </template>
+                            <template v-for="tabela in tabelasPrecos" #[`cell-tabela_${tabela.id}`]="{ row }"
+                                :key="tabela.id">
                                 <span class="font-medium text-green-600">
-                                    {{ formatCurrency(row[`tabela_${p.tabela_id}`]) }}
+                                    {{ formatCurrency(row[`tabela_${tabela.id}`]) }}
                                 </span>
                             </template>
                         </DataTable>
@@ -57,7 +78,7 @@
                 </div>
 
                 <div v-else-if="activeProdutosTab === 'Gerenciar Estoque'">
-                    <ButtonCustom icon="bx-plus" text="Habilitar gerência de estoque" url="/produtos/create"
+                    <ButtonCustom icon="bx-plus" text="Habilitar gerÃªncia de estoque" :url="`/${empresaId}/produtos/create`"
                         :outline="false" />
                 </div>
 
@@ -72,20 +93,20 @@
                             Solte os arquivos aqui
                         </div>
 
-                        <!-- Conteúdo padrão -->
+                        <!-- ConteÃºdo padrÃ£o -->
                         <div class="pointer-events-none">
                             <p class="text-indigo-600 font-medium mb-1">Arraste e solte suas fotos aqui</p>
                             <p class="text-gray-600 dark:text-gray-400 text-sm">
                                 ou clique para selecionar arquivos do computador
                             </p>
                             <p class="text-xs mt-2 text-gray-500 dark:text-gray-500">
-                                Caso o nome do arquivo for o código de um produto ele automaticamente será atribuído ao mesmo.<br />
-                                Formatos aceitos: JPG, JPEG, PNG, GIF &nbsp;•&nbsp; Máx: 2MB por imagem. <br />
-                                Dimensão recomendada: 800 x 800 pixels<br />
+                                Caso o nome do arquivo for o cÃ³digo de um produto ele automaticamente serÃ¡ atribuÃ­do ao mesmo.<br />
+                                Formatos aceitos: JPG, JPEG, PNG, GIF &nbsp;â€¢&nbsp; MÃ¡x: 2MB por imagem. <br />
+                                DimensÃ£o recomendada: 800 x 800 pixels<br />
                             </p>
                         </div>
 
-                        <!-- Input invisível -->
+                        <!-- Input invisÃ­vel -->
                         <input ref="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.gif" class="hidden"
                             @change="handleFiles" />
                     </div>
@@ -94,19 +115,19 @@
             </div>
         </div>
 
-        <!-- Conteúdo Promoções -->
-        <div v-else-if="activeMainTab === 'Promoções'">
-            <ButtonCustom icon="bx-plus" text="Nova promoção" url="/produtos/create" :outline="false" />
+        <!-- ConteÃºdo PromoÃ§Ãµes -->
+        <div v-else-if="activeMainTab === 'PromoÃ§Ãµes'">
+            <ButtonCustom icon="bx-plus" text="Nova promoÃ§Ã£o" :url="`/${empresaId}/produtos/create`" :outline="false" />
         </div>
 
-        <!-- Conteúdo Destaques -->
+        <!-- ConteÃºdo Destaques -->
         <div v-else-if="activeMainTab === 'Destaques'">
-            <ButtonCustom icon="bx-plus" text="Novo destaque" url="/produtos/create" :outline="false" />
+            <ButtonCustom icon="bx-plus" text="Novo destaque" :url="`/${empresaId}/produtos/create`" :outline="false" />
         </div>
 
-        <!-- Conteúdo Configurações -->
-        <div v-else-if="activeMainTab === 'Configurações'">
-            <!-- Sub-tabs Configurações -->
+        <!-- ConteÃºdo ConfiguraÃ§Ãµes -->
+        <div v-else-if="activeMainTab === 'ConfiguraÃ§Ãµes'">
+            <!-- Sub-tabs ConfiguraÃ§Ãµes -->
             <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
                 <nav class="flex space-x-2">
                     <Link :href="sub.url" v-for="sub in configTabs" :key="sub.name" @click="activeConfigTab = sub.name"
@@ -120,23 +141,23 @@
                 </nav>
             </div>
 
-            <!-- Conteúdo das sub-tabs Configurações -->
+            <!-- ConteÃºdo das sub-tabs ConfiguraÃ§Ãµes -->
             <div class="mt-4">
                 <div v-if="activeConfigTab === 'Categorias'">
-                    <ButtonCustom icon="bx-plus" text="Nova categoria" url="/produtos/create" :outline="false" />
+                    <ButtonCustom icon="bx-plus" text="Nova categoria" :url="`/${empresaId}/produtos/create`" :outline="false" />
                 </div>
 
-                <div v-else-if="activeConfigTab === 'Variações de Produto'">
-                    <ButtonCustom icon="bx-plus" text="Nova variação" url="/produtos/create" :outline="false" />
+                <div v-else-if="activeConfigTab === 'VariaÃ§Ãµes de Produto'">
+                    <ButtonCustom icon="bx-plus" text="Nova variaÃ§Ã£o" :url="`/${empresaId}/produtos/create`" :outline="false" />
                 </div>
 
-                <div v-else-if="activeConfigTab === 'Período de Inatividade'">
-                    <ButtonCustom icon="bx-edit" text="Alterar periodo de inativadade" url="/produtos/create"
+                <div v-else-if="activeConfigTab === 'PerÃ­odo de Inatividade'">
+                    <ButtonCustom icon="bx-edit" text="Alterar periodo de inativadade" :url="`/${empresaId}/produtos/create`"
                         :outline="false" />
                 </div>
 
-                <div v-else-if="activeConfigTab === 'Tributações'">
-                    <ButtonCustom icon="bx-plus" text="Nova regra de cálculo" url="/produtos/create" :outline="false" />
+                <div v-else-if="activeConfigTab === 'TributaÃ§Ãµes'">
+                    <ButtonCustom icon="bx-plus" text="Nova regra de cÃ¡lculo" :url="`/${empresaId}/produtos/create`" :outline="false" />
                 </div>
             </div>
         </div>
@@ -144,20 +165,28 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import ButtonCustom from "@/components/ButtonCustom.vue";
 import DataTable from "@/components/DataTable.vue";
-import { usePage, Link } from "@inertiajs/vue3";
+import { usePage, Link, router } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
 import { formatCurrency } from "@/lib/utils";
 
-const fileInput = ref(null)
-const isDragging = ref(false)
+const fileInput = ref(null);
+const isDragging = ref(false);
 
 defineOptions({ layout: AppLayout });
 
 const page = usePage();
-const produtos = ref(page.props.produtos || { data: [], meta: {} });
+const empresaId = Number(page.props.empresa_selecionada || 0);
+
+const produtos = computed(() => (Array.isArray(page.props.produtos) ? page.props.produtos : []));
+const tabelasPrecos = computed(() =>
+    Array.isArray(page.props.tabelas_precos) ? page.props.tabelas_precos : []
+);
+const editingTabelaId = ref(null);
+const editingTabelaNome = ref("");
+const savingTabelaId = ref(null);
 
 const mainTabs = [
     { name: "Produtos", icon: "bx bx-box", url: "./produtos" },
@@ -167,7 +196,6 @@ const mainTabs = [
 ];
 const activeMainTab = ref("Produtos");
 
-// Sub-tabs Produtos
 const produtosTabs = [
     { name: "Produtos e Tabelas", icon: "bx bx-list-ul", url: "./produtos/tabelas" },
     { name: "Gerenciar Estoque", icon: "bx bx-store", url: "./produtos/gerenciar_estoque" },
@@ -175,7 +203,6 @@ const produtosTabs = [
 ];
 const activeProdutosTab = ref("Produtos e Tabelas");
 
-// Sub-tabs Configurações
 const configTabs = [
     { name: "Categorias", icon: "bx bx-category", url: "./produtos/configuracoes/categorias" },
     { name: "Variações de Produto", icon: "bx bx-transfer", url: "./produtos/configuracoes/variacoes_produto" },
@@ -184,8 +211,7 @@ const configTabs = [
 ];
 const activeConfigTab = ref("Categorias");
 
-// Colunas do DataTable
-const columns = [
+const columns = computed(() => [
     { label: "Fotos", key: "fotos" },
     { label: "Código", key: "codigo" },
     { label: "Nome", key: "nome" },
@@ -195,38 +221,75 @@ const columns = [
     { label: "Comissão", key: "comissao" },
     { label: "Preço Mínimo", key: "preco_minimo" },
     { label: "Preço Tabela", key: "preco_tabela" },
-    ...produtos.value.length
-        ? (produtos.value[0].precos || []).map(p => ({
-            label: p.tabelas?.nome || `Tabela ${p.tabela_id}`,
-            key: `tabela_${p.tabela_id}`
-        }))
-        : [],
-];
+    ...tabelasPrecos.value.map((tabela) => ({
+        label: tabela.nome || `Tabela ${tabela.id}`,
+        key: `tabela_${tabela.id}`,
+        sortable: false,
+    })),
+]);
 
-const produtosNormalizados = produtos.value.map(produto => {
-    const precosObj = {};
-    (produto.precos || []).forEach(p => {
-        precosObj[`tabela_${p.tabela_id}`] = p.preco;
-    });
-    return { ...produto, ...precosObj };
-});
+const produtosNormalizados = computed(() =>
+    produtos.value.map((produto) => {
+        const precosObj = {};
+        tabelasPrecos.value.forEach((tabela) => {
+            precosObj[`tabela_${tabela.id}`] = null;
+        });
+
+        (produto.precos || []).forEach((p) => {
+            precosObj[`tabela_${p.tabela_id}`] = p.preco;
+        });
+
+        return { ...produto, ...precosObj };
+    })
+);
 
 function triggerFileInput() {
-  fileInput.value?.click()
+    fileInput.value?.click();
 }
 
 function handleFiles(event) {
-  const files = event.target.files
-  if (!files.length) return
-  console.log('Arquivos selecionados:', files)
-  // aqui você pode enviar para o servidor ou exibir previews
+    const files = event.target.files;
+    if (!files.length) return;
+    console.log("Arquivos selecionados:", files);
 }
 
 function handleDrop(event) {
-  isDragging.value = false
-  const files = event.dataTransfer.files
-  if (!files.length) return
-  console.log('Arquivos arrastados:', files)
-  // também pode tratar o upload aqui
+    isDragging.value = false;
+    const files = event.dataTransfer.files;
+    if (!files.length) return;
+    console.log("Arquivos arrastados:", files);
+}
+
+function iniciarEdicaoTabela(tabela) {
+    editingTabelaId.value = tabela.id;
+    editingTabelaNome.value = tabela.nome || "";
+}
+
+function cancelarEdicaoTabela() {
+    editingTabelaId.value = null;
+    editingTabelaNome.value = "";
+}
+
+function salvarEdicaoTabela(tabelaId) {
+    const nome = editingTabelaNome.value.trim();
+    if (!nome) {
+        cancelarEdicaoTabela();
+        return;
+    }
+
+    savingTabelaId.value = tabelaId;
+
+    router.put(`/${empresaId}/produtos/tabelas-precos/${tabelaId}`, { nome }, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            cancelarEdicaoTabela();
+        },
+        onFinish: () => {
+            savingTabelaId.value = null;
+        },
+    });
 }
 </script>
+
+
