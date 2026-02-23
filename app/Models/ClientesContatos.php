@@ -19,12 +19,12 @@ class ClientesContatos extends Model
     
     public function empresa()
     {
-        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'empresa_id', 'id');
     }
 
     public function cliente()
     {
-        return $this->belongsTo(Clientes::class, 'id', 'cliente_id');
+        return $this->belongsTo(Clientes::class, 'cliente_id', 'id');
     }
 
     public function emails()
