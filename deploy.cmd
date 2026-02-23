@@ -18,7 +18,7 @@ IF NOT EXIST resources\views\app.blade.php (
 )
 echo Blade confirmado.
 
-REM 3Instalar dependencias Node.js
+REM Instalar dependencias Node.js
 echo Instalando dependencias Node.js...
 call npm install --legacy-peer-deps
 
