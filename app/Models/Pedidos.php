@@ -23,7 +23,7 @@ class Pedidos extends Model
 
     public function empresa()
     {
-        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'empresa_id', 'id');
     }
 
     public function itens()
@@ -38,12 +38,12 @@ class Pedidos extends Model
 
     public function forma_pagamento()
     {
-        return $this->belongsTo(FormasPagamentos::class, 'id', 'forma_pagamento_id');
+        return $this->belongsTo(FormasPagamentos::class, 'forma_pagamento_id', 'id');
     }
 
     public function condicao_pagamento()
     {
-        return $this->belongsTo(CondicoesPagamentos::class, 'id', 'condicao_pagamento_id');
+        return $this->belongsTo(CondicoesPagamentos::class, 'condicao_pagamento_id', 'id');
     }
 
     public function extras()
@@ -58,6 +58,6 @@ class Pedidos extends Model
 
     public function tipo_pedido()
     {
-        return $this->belongsTo(TiposPedidos::class, 'id', 'tipo_pedido_id');
+        return $this->belongsTo(TiposPedidos::class, 'tipo_pedido_id', 'id');
     }
 }
