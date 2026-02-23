@@ -165,9 +165,9 @@ class ProdutosController extends Controller
                     ->where('empresa_id', (int) $empresa)
                     ->where('excluido', false)),
             ],
-            'imagem' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
+            'imagem' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
             'imagens' => ['nullable', 'array'],
-            'imagens.*' => ['file', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
+            'imagens.*' => ['file', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
         ];
     }
 
@@ -521,7 +521,7 @@ class ProdutosController extends Controller
 
         $validated = $request->validate([
             'files' => ['required', 'array', 'min:1'],
-            'files.*' => ['file', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
+            'files.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
         ]);
 
         $importadas = 0;
@@ -578,7 +578,7 @@ class ProdutosController extends Controller
 
         $validated = $request->validate([
             'imagens' => ['required', 'array', 'min:1'],
-            'imagens.*' => ['file', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
+            'imagens.*' => ['file', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:2048'],
         ]);
 
         $this->addImagensProduto($empresa, (int) $produtoModel->id, $validated['imagens']);

@@ -96,7 +96,7 @@
               </p>
             </div>
 
-            <input ref="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.gif" class="hidden" @change="handleFiles" />
+            <input ref="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.gif,.webp" class="hidden" @change="handleFiles" />
           </div>
         </div>
       </div>
