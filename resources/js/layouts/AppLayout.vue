@@ -23,23 +23,23 @@
                 </div>
             </div>
             <!-- Navegação -->
-            <nav class="px-3 py-4 space-y-2 overflow-auto dark:text-gray-50">
-                <SidebarLink :href="`./dashboard`" icon="bx bx-home" label="Dashboard"
+            <nav class="px-3 py-4 space-y-2 overflow-auto dark:text-gray-50 text-indigo-600">
+                <SidebarLink :href="`${menuBasePath}/dashboard`" icon="bx bxs-dashboard" label="Dashboard"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`./pedidos`" icon="bx bx-cart" label="Pedidos"
+                <SidebarLink :href="`${menuBasePath}/pedidos`" icon="bx bxs-cart" label="Pedidos"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`./clientes`" icon="bx bx-user" label="Clientes"
+                <SidebarLink :href="`${menuBasePath}/clientes`" icon="bx bxs-user" label="Clientes"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`./produtos`" icon="bx bx-box" label="Produtos"
+                <SidebarLink :href="`${menuBasePath}/produtos`" icon="bx bxs-box" label="Produtos"
                     :collapsed="sidebarCollapsed" />
             </nav>
 
             <!-- Rodapé do menu fixo no fundo -->
             <div
-                class="absolute bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-2">
-                <SidebarLink :href="`./b2b`" icon="bx bx-store" label="E-commerce B2B"
+                class="absolute bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 text-indigo-600 px-3 py-4 space-y-2">
+                <SidebarLink :href="`${menuBasePath}/b2b`" icon="bx bxs-store" label="E-commerce B2B"
                     :collapsed="sidebarCollapsed" />
-                <SidebarLink :href="`./conta`" icon="bx bx-cog" label="Minha Conta"
+                <SidebarLink :href="`${menuBasePath}/conta`" icon="bx bxs-cog" label="Minha Conta"
                     :collapsed="sidebarCollapsed" />
             </div>
         </aside>
@@ -112,7 +112,7 @@
 
 
 <script setup>
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { Link } from "@inertiajs/vue3";
 import SidebarLink from "@/components/SidebarLink.vue";
 import FormField from "@/components/FormField.vue";
@@ -125,6 +125,7 @@ const urlParts = window.location.pathname.split('/').filter(Boolean);
 const empresaIdDaUrl = Number(urlParts[0]) || (empresas.value[0]?.id || null);
 
 const empresa = ref(empresaIdDaUrl || null);
+const menuBasePath = computed(() => `/${empresa.value || empresaIdDaUrl}`);
 
 const sidebarCollapsed = ref(false); 
 const mobileOpen = ref(false);
