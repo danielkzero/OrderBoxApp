@@ -12,18 +12,18 @@ class ClientesContatosTelefones extends Model
     protected $table = 'clientes_contatos_telefones';
 
     protected $fillable = [
-        'empresa_id', 'cliente_contato_id', 'email', 'tipo'
+        'empresa_id', 'cliente_contato_id', 'numero', 'tipo'
     ];
 
     public $timestamps = false;
 
     public function empresa()
     {
-        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'empresa_id', 'id');
     }
 
     public function contato()
     {
-        return $this->belongsTo(ClientesContatos::class, 'id', 'cliente_contato_id');
+        return $this->belongsTo(ClientesContatos::class, 'cliente_contato_id', 'id');
     }
 }
