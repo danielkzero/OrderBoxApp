@@ -29,7 +29,7 @@ class Clientes extends Model
 
     public function motivo_bloqueio()
     {
-        return $this->belongsTo(MotivosBloqueios::class, 'id', 'motivo_bloqueio_id');
+        return $this->belongsTo(MotivosBloqueios::class, 'motivo_bloqueio_id', 'id');
     }
 
     public function contatos()
