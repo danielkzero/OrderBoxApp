@@ -12,19 +12,19 @@ class ClientesEnderecos extends Model
     protected $table = 'clientes_enderecos';
 
     protected $fillable = [
-        'empresa_id', 'cliente_id', 'rua', 'complemento', 'bairro', 'cep', 'municipio_codigo', 'ultima_alteracao'
+        'empresa_id', 'cliente_id', 'rua', 'numero', 'complemento', 'bairro', 'cep', 'municipio_codigo', 'ultima_alteracao'
     ];
 
     public $timestamps = false;
 
     public function empresa()
     {
-        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'empresa_id', 'id');
     }
 
     public function cliente()
     {
-        return $this->belongsTo(Clientes::class, 'id', 'cliente_id');
+        return $this->belongsTo(Clientes::class, 'cliente_id', 'id');
     }
 
     public function ibge()
