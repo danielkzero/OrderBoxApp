@@ -321,6 +321,7 @@ const variacoes = page.props.variacoes || [];
 const inputGaleriaRef = ref(null);
 const openImagensModal = ref(false);
 const uploadingImagens = ref(false);
+const salvandoOrdenacao = ref(false);
 const removendoImagemId = ref(null);
 const imagensPendentes = ref([]);
 const galeriaImagens = ref(Array.isArray(produto?.imagens) ? produto.imagens : []);
@@ -372,7 +373,9 @@ const imagemPreview = computed(() => {
 });
 
 const imagensGaleria = computed(() => {
-  const persistidas = galeriaImagens.value.map((img) => ({
+  const persistidas = [...galeriaImagens.value]
+    .sort((a, b) => (Number(a.ordem) - Number(b.ordem)) || (Number(a.id) - Number(b.id)))
+    .map((img) => ({
     ...img,
     uid: `persistida-${img.id}`,
   }));
@@ -445,6 +448,17 @@ async function onSelecionarImagens(event) {
 }
 
 async function uploadImagensEdicao(arquivos) {
+  const previewsTemporarios = await Promise.all(
+    arquivos.map(async (arquivo, idx) => ({
+      uid: `uploading-${Date.now()}-${idx}`,
+      imagem_base64: await arquivoParaBase64(arquivo),
+      ordem: (galeriaImagens.value.length || 0) + idx + 1,
+      created_at: null,
+      uploading: true,
+    }))
+  );
+
+  galeriaImagens.value = [...galeriaImagens.value, ...previewsTemporarios];
   uploadingImagens.value = true;
 
   try {
@@ -466,6 +480,8 @@ async function uploadImagensEdicao(arquivos) {
 
     const json = await resposta.json();
     galeriaImagens.value = Array.isArray(json.imagens) ? json.imagens : galeriaImagens.value;
+  } catch (e) {
+    galeriaImagens.value = galeriaImagens.value.filter((img) => !img.uploading);
   } finally {
     uploadingImagens.value = false;
   }
@@ -503,6 +519,59 @@ async function removerImagem(img) {
   }
 }
 
+async function moverImagem(index, deslocamento) {
+  const novoIndex = index + deslocamento;
+  if (novoIndex < 0 || novoIndex >= imagensGaleria.value.length) return;
+
+  if (imagensGaleria.value[index]?.pendente || imagensGaleria.value[novoIndex]?.pendente) {
+    return;
+  }
+
+  const atual = [...galeriaImagens.value].sort((a, b) => (Number(a.ordem) - Number(b.ordem)) || (Number(a.id) - Number(b.id)));
+  const [item] = atual.splice(index, 1);
+  atual.splice(novoIndex, 0, item);
+
+  galeriaImagens.value = atual.map((img, idx) => ({
+    ...img,
+    ordem: idx,
+  }));
+
+  if (isEdit && produto?.id) {
+    await salvarOrdenacaoImagens();
+  }
+}
+
+async function salvarOrdenacaoImagens() {
+  const payload = galeriaImagens.value
+    .filter((img) => img.id)
+    .map((img, idx) => ({ id: img.id, ordem: idx }));
+
+  if (!payload.length) return;
+
+  salvandoOrdenacao.value = true;
+
+  try {
+    const resposta = await fetch(`/${empresaId}/produtos/${produto.id}/imagens/ordenacao`, {
+      method: 'PUT',
+      headers: {
+        'X-CSRF-TOKEN': obterCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest',
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ imagens: payload }),
+    });
+
+    if (!resposta.ok) throw new Error('Falha ao ordenar imagens');
+
+    const json = await resposta.json();
+    galeriaImagens.value = Array.isArray(json.imagens) ? json.imagens : galeriaImagens.value;
+  } finally {
+    salvandoOrdenacao.value = false;
+  }
+}
+
 function arquivoParaBase64(arquivo) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -515,6 +584,21 @@ function arquivoParaBase64(arquivo) {
 function obterCsrfToken() {
   const meta = document.querySelector('meta[name=\"csrf-token\"]');
   return meta?.getAttribute('content') || '';
+}
+
+function formatarDataImagem(valor) {
+  if (!valor) return 'Aguardando upload';
+  try {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(valor));
+  } catch {
+    return valor;
+  }
 }
 </script>
 
@@ -619,6 +703,13 @@ function obterCsrfToken() {
   padding: 16px;
 }
 
+.modal-card-imagens {
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .modal-header {
   display: flex;
   align-items: center;
@@ -652,5 +743,46 @@ function obterCsrfToken() {
   justify-content: center;
   color: #4b5563;
   background: #fff;
+}
+
+.icon-btn-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
+  background: #fff;
+}
+
+.icon-btn-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.image-number {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  background: rgba(79, 70, 229, 0.9);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.image-uploading {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(17, 24, 39, 0.8);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 2px 6px;
 }
 </style>
