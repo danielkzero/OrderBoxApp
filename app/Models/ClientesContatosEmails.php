@@ -19,11 +19,11 @@ class ClientesContatosEmails extends Model
 
     public function empresa()
     {
-        return $this->belongsTo(Empresas::class, 'id', 'empresa_id');
+        return $this->belongsTo(Empresas::class, 'empresa_id', 'id');
     }
 
     public function contato()
     {
-        return $this->belongsTo(ClientesContatos::class, 'id', 'cliente_contato_id');
+        return $this->belongsTo(ClientesContatos::class, 'cliente_contato_id', 'id');
     }
 }
