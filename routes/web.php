@@ -199,6 +199,18 @@ Route::prefix('{empresa}')->middleware('auth')->group(function () {
     Route::post('produtos/importar-fotos', [ProdutosController::class, 'importarFotos'])
         ->where(['empresa' => '[0-9]+'])
         ->name('produtos.importar_fotos');
+    Route::post('produtos/{produto}/imagens', [ProdutosController::class, 'storeImagemProduto'])
+        ->where(['empresa' => '[0-9]+', 'produto' => '[0-9]+'])
+        ->name('produtos.imagens.store');
+    Route::delete('produtos/{produto}/imagens/{imagem}', [ProdutosController::class, 'destroyImagemProduto'])
+        ->where(['empresa' => '[0-9]+', 'produto' => '[0-9]+', 'imagem' => '[0-9]+'])
+        ->name('produtos.imagens.destroy');
+    Route::put('produtos/{produto}/imagens/ordenacao', [ProdutosController::class, 'updateOrdenacaoImagensProduto'])
+        ->where(['empresa' => '[0-9]+', 'produto' => '[0-9]+'])
+        ->name('produtos.imagens.ordenacao.update');
+    Route::put('produtos/tabelas-precos/{tabela}', [ProdutosController::class, 'updateTabelaPreco'])
+        ->where(['empresa' => '[0-9]+', 'tabela' => '[0-9]+'])
+        ->name('produtos.tabelas_precos.update');
     Route::delete('produtos/imagens', [ProdutosController::class, 'excluirTodasImagens'])
         ->where(['empresa' => '[0-9]+'])
         ->name('produtos.imagens.destroy_all');
