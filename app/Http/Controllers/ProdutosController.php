@@ -9,17 +9,17 @@ use App\Models\ProdutosConfiguracoesGerais;
 use App\Models\ProdutosDestaques;
 use App\Models\ProdutosDestaquesItens;
 use App\Models\ProdutosImagens;
+use App\Models\ProdutosPrecos;
 use App\Models\ProdutosPromocoes;
 use App\Models\ProdutosPromocoesItens;
-use App\Models\ProdutosPrecos;
 use App\Models\TabelasPrecos;
 use App\Models\Variacoes;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -60,7 +60,7 @@ class ProdutosController extends Controller
             ->get(['id', 'nome']);
 
         $variacoes = Variacoes::query()
-            ->with(['variacao_itens' => fn ($q) => $q->where('excluido', false)->orderBy('nome')])
+            ->with(['variacao_itens' => fn($q) => $q->where('excluido', false)->orderBy('nome')])
             ->where('empresa_id', $empresa)
             ->where('excluido', false)
             ->orderBy('ordem')
@@ -76,13 +76,15 @@ class ProdutosController extends Controller
 
     private function produtoParaFormulario(Produtos $produto): array
     {
-        $precosTabelas = $produto->precos
+        $precosTabelas = $produto
+            ->precos
             ->where('excluido', false)
             ->pluck('preco', 'tabela_id')
-            ->map(fn ($valor) => (float)$valor)
+            ->map(fn($valor) => (float) $valor)
             ->toArray();
 
-        $imagemAtual = $produto->imagens
+        $imagemAtual = $produto
+            ->imagens
             ->sortBy('ordem')
             ->first();
 
@@ -94,26 +96,27 @@ class ProdutosController extends Controller
             'multiplo' => $produto->multiplo,
             'categoria_id' => $produto->categoria_id,
             'moeda' => $produto->moeda ?: 'R$',
-            'preco_tabela' => (float)($produto->preco_tabela ?? 0),
-            'preco_minimo' => (float)($produto->preco_minimo ?? 0),
+            'preco_tabela' => (float) ($produto->preco_tabela ?? 0),
+            'preco_minimo' => (float) ($produto->preco_minimo ?? 0),
             'precos_tabelas' => $precosTabelas,
-            'ipi' => (float)($produto->ipi ?? 0),
+            'ipi' => (float) ($produto->ipi ?? 0),
             'tipo_ipi' => $produto->tipo_ipi ?: '%',
-            'comissao' => (float)($produto->comissao ?? 0),
+            'comissao' => (float) ($produto->comissao ?? 0),
             'codigo_ncm' => $produto->codigo_ncm,
             'observacoes' => $produto->observacoes,
-            'peso_dimensoes_unitario' => (bool)$produto->peso_dimensoes_unitario,
+            'peso_dimensoes_unitario' => (bool) $produto->peso_dimensoes_unitario,
             'peso_bruto' => $produto->peso_bruto,
             'largura' => $produto->largura,
             'altura' => $produto->altura,
             'comprimento' => $produto->comprimento,
-            'ativo' => (bool)$produto->ativo,
-            'exibir_no_b2b' => (bool)$produto->exibir_no_b2b,
+            'ativo' => (bool) $produto->ativo,
+            'exibir_no_b2b' => (bool) $produto->exibir_no_b2b,
             'imagem_base64' => $imagemAtual?->imagem_base64,
-            'imagens' => $produto->imagens
-                ->sortBy(fn ($img) => sprintf('%010d-%010d', (int)$img->ordem, (int)$img->id))
+            'imagens' => $produto
+                ->imagens
+                ->sortBy(fn($img) => sprintf('%010d-%010d', (int) $img->ordem, (int) $img->id))
                 ->values()
-                ->map(fn ($img) => [
+                ->map(fn($img) => [
                     'id' => $img->id,
                     'imagem_base64' => $img->imagem_base64,
                     'ordem' => $img->ordem,
@@ -131,8 +134,8 @@ class ProdutosController extends Controller
                 'string',
                 'max:255',
                 Rule::unique('produtos', 'codigo')
-                    ->where(fn ($q) => $q
-                        ->where('empresa_id', (int)$empresa)
+                    ->where(fn($q) => $q
+                        ->where('empresa_id', (int) $empresa)
                         ->where('excluido', false))
                     ->ignore($produtoId),
             ],
@@ -158,8 +161,8 @@ class ProdutosController extends Controller
             'ativo' => ['nullable', 'boolean'],
             'categoria_id' => [
                 'nullable',
-                Rule::exists('categorias', 'id')->where(fn ($q) => $q
-                    ->where('empresa_id', (int)$empresa)
+                Rule::exists('categorias', 'id')->where(fn($q) => $q
+                    ->where('empresa_id', (int) $empresa)
                     ->where('excluido', false)),
             ],
             'imagem' => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
@@ -179,7 +182,7 @@ class ProdutosController extends Controller
 
         ProdutosImagens::query()->updateOrCreate(
             [
-                'empresa_id' => (int)$empresa,
+                'empresa_id' => (int) $empresa,
                 'produto_id' => $produtoId,
                 'ordem' => 0,
             ],
@@ -206,7 +209,7 @@ class ProdutosController extends Controller
             $ordem++;
 
             ProdutosImagens::create([
-                'empresa_id' => (int)$empresa,
+                'empresa_id' => (int) $empresa,
                 'produto_id' => $produtoId,
                 'imagem_base64' => $base64,
                 'ordem' => $ordem,
@@ -240,13 +243,13 @@ class ProdutosController extends Controller
             'comissao' => $validated['comissao'] ?? null,
             'codigo_ncm' => $validated['codigo_ncm'] ?? null,
             'observacoes' => $validated['observacoes'] ?? null,
-            'peso_dimensoes_unitario' => (bool)($validated['peso_dimensoes_unitario'] ?? true),
+            'peso_dimensoes_unitario' => (bool) ($validated['peso_dimensoes_unitario'] ?? true),
             'peso_bruto' => $validated['peso_bruto'] ?? null,
             'largura' => $validated['largura'] ?? null,
             'altura' => $validated['altura'] ?? null,
             'comprimento' => $validated['comprimento'] ?? null,
-            'exibir_no_b2b' => (bool)($validated['exibir_no_b2b'] ?? false),
-            'ativo' => (bool)($validated['ativo'] ?? true),
+            'exibir_no_b2b' => (bool) ($validated['exibir_no_b2b'] ?? false),
+            'ativo' => (bool) ($validated['ativo'] ?? true),
             'categoria_id' => $validated['categoria_id'] ?? null,
             'ultima_alteracao' => now(),
         ];
@@ -263,7 +266,7 @@ class ProdutosController extends Controller
         $ativos = [];
 
         foreach ($tabelasIds as $tabelaId) {
-            $valor = $precosTabelas[$tabelaId] ?? $precosTabelas[(string)$tabelaId] ?? null;
+            $valor = $precosTabelas[$tabelaId] ?? $precosTabelas[(string) $tabelaId] ?? null;
 
             if ($valor === null || $valor === '') {
                 continue;
@@ -271,9 +274,9 @@ class ProdutosController extends Controller
 
             $ativo = ProdutosPrecos::query()->updateOrCreate(
                 [
-                    'empresa_id' => (int)$empresa,
+                    'empresa_id' => (int) $empresa,
                     'produto_id' => $produtoId,
-                    'tabela_id' => (int)$tabelaId,
+                    'tabela_id' => (int) $tabelaId,
                 ],
                 [
                     'preco' => $valor,
@@ -288,7 +291,7 @@ class ProdutosController extends Controller
         ProdutosPrecos::query()
             ->where('empresa_id', $empresa)
             ->where('produto_id', $produtoId)
-            ->when(!empty($ativos), fn ($q) => $q->whereNotIn('id', $ativos))
+            ->when(!empty($ativos), fn($q) => $q->whereNotIn('id', $ativos))
             ->update([
                 'excluido' => true,
                 'ultima_alteracao' => now(),
@@ -304,12 +307,12 @@ class ProdutosController extends Controller
         $destaqueId = request()->query('destaque_id');
 
         $produtos = Produtos::with([
-            'imagens',
+            'imagens' => fn($q) => $q->orderBy('ordem'),
             'categorias',
-            'precos' => fn ($q) => $q
+            'precos' => fn($q) => $q
                 ->where('empresa_id', $empresa)
                 ->where('excluido', false)
-                ->with(['tabelas' => fn ($t) => $t
+                ->with(['tabelas' => fn($t) => $t
                     ->where('empresa_id', $empresa)
                     ->where('excluido', false)]),
             'grades.variacoes',
@@ -386,13 +389,13 @@ class ProdutosController extends Controller
 
         $configuracoesGerais = ProdutosConfiguracoesGerais::query()
             ->firstOrCreate(
-                ['empresa_id' => (int)$empresa],
+                ['empresa_id' => (int) $empresa],
                 ['inativos_recentes_dias' => 180, 'inativos_antigos_dias' => 365]
             );
 
         return Inertia::render('Produtos/Index', [
             'produtos' => $produtos,
-            'empresa_selecionada' => (int)$empresa,
+            'empresa_selecionada' => (int) $empresa,
             'categorias' => $categorias,
             'tabelas_precos' => $tabelasPrecos,
             'variacoes' => $variacoes,
@@ -412,7 +415,7 @@ class ProdutosController extends Controller
         $this->validarAcessoEmpresa($empresa);
 
         return Inertia::render('Produtos/Form', [
-            'empresa_id' => (int)$empresa,
+            'empresa_id' => (int) $empresa,
             'is_edit' => false,
             'produto' => null,
             ...$this->dadosFormularioProduto($empresa),
@@ -427,14 +430,14 @@ class ProdutosController extends Controller
 
         $produto = DB::transaction(function () use ($empresa, $validated, $request) {
             $produtoCriado = Produtos::create([
-                'empresa_id' => (int)$empresa,
+                'empresa_id' => (int) $empresa,
                 ...$this->mapearPayloadProduto($validated),
                 'excluido' => false,
             ]);
 
-            $this->syncPrecosTabela($empresa, (int)$produtoCriado->id, $validated['precos_tabelas'] ?? []);
-            $this->syncImagemProduto($empresa, (int)$produtoCriado->id, request()->file('imagem'));
-            $this->addImagensProduto($empresa, (int)$produtoCriado->id, $request->file('imagens', []));
+            $this->syncPrecosTabela($empresa, (int) $produtoCriado->id, $validated['precos_tabelas'] ?? []);
+            $this->syncImagemProduto($empresa, (int) $produtoCriado->id, request()->file('imagem'));
+            $this->addImagensProduto($empresa, (int) $produtoCriado->id, $request->file('imagens', []));
 
             return $produtoCriado;
         });
@@ -455,7 +458,7 @@ class ProdutosController extends Controller
 
         $produtoModel = Produtos::query()
             ->with([
-                'precos' => fn ($q) => $q->where('excluido', false),
+                'precos' => fn($q) => $q->where('excluido', false),
                 'imagens',
             ])
             ->where('empresa_id', $empresa)
@@ -463,7 +466,7 @@ class ProdutosController extends Controller
             ->findOrFail($produto);
 
         return Inertia::render('Produtos/Form', [
-            'empresa_id' => (int)$empresa,
+            'empresa_id' => (int) $empresa,
             'is_edit' => true,
             'produto' => $this->produtoParaFormulario($produtoModel),
             ...$this->dadosFormularioProduto($empresa),
@@ -480,14 +483,14 @@ class ProdutosController extends Controller
             ->findOrFail($produto);
 
         $validated = $request->validate(
-            $this->regrasValidacaoProduto($empresa, (int)$produtoModel->id)
+            $this->regrasValidacaoProduto($empresa, (int) $produtoModel->id)
         );
 
         DB::transaction(function () use ($produtoModel, $validated, $empresa, $request) {
             $produtoModel->update($this->mapearPayloadProduto($validated));
-            $this->syncPrecosTabela($empresa, (int)$produtoModel->id, $validated['precos_tabelas'] ?? []);
-            $this->syncImagemProduto($empresa, (int)$produtoModel->id, request()->file('imagem'));
-            $this->addImagensProduto($empresa, (int)$produtoModel->id, $request->file('imagens', []));
+            $this->syncPrecosTabela($empresa, (int) $produtoModel->id, $validated['precos_tabelas'] ?? []);
+            $this->syncImagemProduto($empresa, (int) $produtoModel->id, request()->file('imagem'));
+            $this->addImagensProduto($empresa, (int) $produtoModel->id, $request->file('imagens', []));
         });
 
         return back()->with('success', 'Produto atualizado com sucesso.');
@@ -541,7 +544,7 @@ class ProdutosController extends Controller
             $base64 = "data:{$mime};base64,{$imagem}";
 
             ProdutosImagens::create([
-                'empresa_id' => (int)$empresa,
+                'empresa_id' => (int) $empresa,
                 'produto_id' => $produto->id,
                 'imagem_base64' => $base64,
                 'ordem' => 0,
@@ -578,11 +581,11 @@ class ProdutosController extends Controller
             'imagens.*' => ['file', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
         ]);
 
-        $this->addImagensProduto($empresa, (int)$produtoModel->id, $validated['imagens']);
+        $this->addImagensProduto($empresa, (int) $produtoModel->id, $validated['imagens']);
 
         return response()->json([
             'success' => true,
-            'imagens' => $this->listarImagensProduto($empresa, (int)$produtoModel->id),
+            'imagens' => $this->listarImagensProduto($empresa, (int) $produtoModel->id),
         ]);
     }
 
@@ -601,13 +604,13 @@ class ProdutosController extends Controller
             'imagens.*.ordem' => ['required', 'integer', 'min:0'],
         ]);
 
-        $ids = collect($validated['imagens'])->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $ids = collect($validated['imagens'])->pluck('id')->map(fn($id) => (int) $id)->all();
         $existentes = ProdutosImagens::query()
             ->where('empresa_id', $empresa)
             ->where('produto_id', $produtoModel->id)
             ->whereIn('id', $ids)
             ->pluck('id')
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->all();
 
         if (count($existentes) !== count($ids)) {
@@ -619,14 +622,14 @@ class ProdutosController extends Controller
                 ProdutosImagens::query()
                     ->where('empresa_id', $empresa)
                     ->where('produto_id', $produtoModel->id)
-                    ->where('id', (int)$img['id'])
-                    ->update(['ordem' => (int)$img['ordem']]);
+                    ->where('id', (int) $img['id'])
+                    ->update(['ordem' => (int) $img['ordem']]);
             }
         });
 
         return response()->json([
             'success' => true,
-            'imagens' => $this->listarImagensProduto($empresa, (int)$produtoModel->id),
+            'imagens' => $this->listarImagensProduto($empresa, (int) $produtoModel->id),
         ]);
     }
 
@@ -648,7 +651,7 @@ class ProdutosController extends Controller
 
         return response()->json([
             'success' => true,
-            'imagens' => $this->listarImagensProduto($empresa, (int)$produtoModel->id),
+            'imagens' => $this->listarImagensProduto($empresa, (int) $produtoModel->id),
         ]);
     }
 
@@ -683,7 +686,7 @@ class ProdutosController extends Controller
         ]);
 
         Categorias::create([
-            'empresa_id' => (int)$empresa,
+            'empresa_id' => (int) $empresa,
             'nome' => $validated['nome'],
             'categoria_pai_id' => $validated['categoria_pai_id'] ?? null,
             'ultima_alteracao' => now(),
@@ -738,13 +741,13 @@ class ProdutosController extends Controller
             'nome' => ['required', 'string', 'max:150'],
         ]);
 
-        $ordem = (int)Variacoes::query()
+        $ordem = (int) Variacoes::query()
             ->where('empresa_id', $empresa)
             ->where('excluido', false)
             ->max('ordem') + 1;
 
         Variacoes::create([
-            'empresa_id' => (int)$empresa,
+            'empresa_id' => (int) $empresa,
             'nome' => $validated['nome'],
             'ordem' => $ordem,
             'ultima_alteracao' => now(),
@@ -801,7 +804,7 @@ class ProdutosController extends Controller
         ]);
 
         ProdutosConfiguracoesGerais::updateOrCreate(
-            ['empresa_id' => (int)$empresa],
+            ['empresa_id' => (int) $empresa],
             [
                 'inativos_recentes_dias' => $validated['inativos_recentes_dias'],
                 'inativos_antigos_dias' => $validated['inativos_antigos_dias'],
@@ -831,7 +834,7 @@ class ProdutosController extends Controller
 
         Icms_st::create([
             ...$validated,
-            'empresa_id' => (int)$empresa,
+            'empresa_id' => (int) $empresa,
             'estado_destino' => strtoupper($validated['estado_destino']),
             'ultima_alteracao' => now(),
         ]);
@@ -900,7 +903,7 @@ class ProdutosController extends Controller
         ]);
 
         $promocao = ProdutosPromocoes::create([
-            'empresa_id' => (int)$empresa,
+            'empresa_id' => (int) $empresa,
             'nome' => $validated['nome'],
             'data_inicio' => $validated['data_inicio'] ?? null,
             'data_fim' => $validated['data_fim'] ?? null,
@@ -909,7 +912,7 @@ class ProdutosController extends Controller
 
         foreach (($validated['produto_ids'] ?? []) as $produtoId) {
             ProdutosPromocoesItens::firstOrCreate([
-                'empresa_id' => (int)$empresa,
+                'empresa_id' => (int) $empresa,
                 'promocao_id' => $promocao->id,
                 'produto_id' => $produtoId,
             ], ['excluido' => false]);
@@ -945,7 +948,7 @@ class ProdutosController extends Controller
         ]);
 
         $destaque = ProdutosDestaques::create([
-            'empresa_id' => (int)$empresa,
+            'empresa_id' => (int) $empresa,
             'nome' => $validated['nome'],
             'data_inicio' => $validated['data_inicio'] ?? null,
             'data_fim' => $validated['data_fim'] ?? null,
@@ -954,7 +957,7 @@ class ProdutosController extends Controller
 
         foreach (($validated['produto_ids'] ?? []) as $produtoId) {
             ProdutosDestaquesItens::firstOrCreate([
-                'empresa_id' => (int)$empresa,
+                'empresa_id' => (int) $empresa,
                 'destaque_id' => $destaque->id,
                 'produto_id' => $produtoId,
             ], ['excluido' => false]);
@@ -1017,7 +1020,7 @@ class ProdutosController extends Controller
 
         ProdutosDestaquesItens::updateOrCreate(
             [
-                'empresa_id' => (int)$empresa,
+                'empresa_id' => (int) $empresa,
                 'destaque_id' => $destaqueModel->id,
                 'produto_id' => $validated['produto_id'],
             ],
