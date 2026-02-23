@@ -69,7 +69,9 @@
                         <th v-for="col in allColumns" :key="col.key" class="py-2 px-4 border-b cursor-pointer"
                             @click="col.sortable !== false && toggleSort(col.key)">
                             <div class="flex items-center gap-1">
-                                <span v-if="col.key !== '_expander'">{{ col.label }}</span>
+                                <slot v-if="col.key !== '_expander'" :name="`header-${col.key}`" :column="col">
+                                    <span>{{ col.label }}</span>
+                                </slot>
                                 <span v-else class="sr-only">Expandir</span>
                                 <i v-if="sortKey === col.key && sortOrder === 'asc'" class="bx bx-up-arrow text-xs"></i>
                                 <i v-else-if="sortKey === col.key && sortOrder === 'desc'"
