@@ -93,6 +93,36 @@ class Clientes extends Model
         return $this->hasMany(Pedidos::class, 'cliente_id', 'id');
     }
 
+    public function categorias_permissoes()
+    {
+        return $this->belongsToMany(
+            Categorias::class,
+            'clientes_categorias_permissoes',
+            'cliente_id',
+            'categoria_id'
+        )->withTimestamps();
+    }
+
+    public function condicoes_pagamentos_permissoes()
+    {
+        return $this->belongsToMany(
+            CondicoesPagamentos::class,
+            'clientes_condicoes_pagamentos_permissoes',
+            'cliente_id',
+            'condicao_pagamento_id'
+        )->withTimestamps();
+    }
+
+    public function tabelas_precos_permissoes()
+    {
+        return $this->belongsToMany(
+            TabelasPrecos::class,
+            'clientes_tabelas_precos_permissoes',
+            'cliente_id',
+            'tabela_preco_id'
+        )->withTimestamps();
+    }
+
     public function ibge()
     {
         return $this->belongsTo(CidadesIbge::class, 'municipio_codigo', 'municipio_codigo');
