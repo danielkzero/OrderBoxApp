@@ -24,6 +24,7 @@ use App\Models\CondicoesPagamentos;
 use App\Models\TabelasPrecos;
 use App\Models\Users;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -693,6 +694,98 @@ class ClientesController extends Controller
             'condicoes_pagamentos' => CondicoesPagamentos::where('empresa_id', $empresa)->where('excluido', false)->orderBy('nome')->get(['id', 'nome']),
             'tabelas_precos' => TabelasPrecos::where('empresa_id', $empresa)->where('excluido', false)->orderBy('nome')->get(['id', 'nome']),
             'representadas' => $representadas,
+        ]);
+    }
+
+    private function montarDetalhesClienteVinculos(int|string $empresa, int|string $cliente): array
+    {
+        $clienteModel = Clientes::query()
+            ->with([
+                'ibge',
+                'telefones',
+                'emails',
+                'contatos.telefones',
+                'contatos.emails',
+                'excecao_fiscal',
+                'motivo_bloqueio',
+                'tabelas_precos_permissoes',
+            ])
+            ->where('empresa_id', (int) $empresa)
+            ->where('excluido', false)
+            ->findOrFail($cliente);
+
+        $pedidosUltimos6Meses = $clienteModel->pedidos()
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->count();
+
+        $vendedores = Users::query()
+            ->whereIn(
+                'id',
+                $clienteModel->pedidos()
+                    ->whereNotNull('criador_id')
+                    ->distinct()
+                    ->pluck('criador_id')
+            )
+            ->orderBy('name')
+            ->pluck('name')
+            ->values();
+
+        $telefonePrincipal = $clienteModel->telefones->first()?->numero;
+        $emailPrincipal = $clienteModel->emails->first()?->email;
+
+        return [
+            'id' => $clienteModel->id,
+            'razao_social' => $clienteModel->razao_social,
+            'nome_fantasia' => $clienteModel->nome_fantasia,
+            'cnpj' => $clienteModel->cnpj,
+            'inscricao_estadual' => $clienteModel->inscricao_estadual,
+            'telefone' => $telefonePrincipal,
+            'email' => $emailPrincipal,
+            'endereco' => [
+                'rua' => $clienteModel->rua,
+                'numero' => $clienteModel->numero,
+                'complemento' => $clienteModel->complemento,
+                'bairro' => $clienteModel->bairro,
+                'cep' => $clienteModel->cep,
+                'cidade' => $clienteModel->ibge?->municipio_nome,
+                'estado' => $clienteModel->ibge?->uf_nome,
+            ],
+            'bloqueado' => (bool) $clienteModel->bloqueado,
+            'motivo_bloqueio' => $clienteModel->motivo_bloqueio?->nome,
+            'excecao_fiscal' => $clienteModel->excecao_fiscal?->nome,
+            'vendedores' => $vendedores,
+            'tabelas_preco' => $clienteModel->tabelas_precos_permissoes->pluck('nome')->filter()->values(),
+            'contatos' => $clienteModel->contatos->map(fn ($contato) => [
+                'nome' => $contato->nome,
+                'cargo' => $contato->cargo,
+                'telefones' => $contato->telefones->pluck('numero')->filter()->values(),
+                'emails' => $contato->emails->pluck('email')->filter()->values(),
+            ])->values(),
+            'resumo' => [
+                'pedidos_ultimos_6_meses' => $pedidosUltimos6Meses,
+            ],
+            'cadastro' => [
+                'data' => optional($clienteModel->created_at)->format('d/m/Y'),
+            ],
+        ];
+    }
+
+    public function vinculosPermissoesCliente($empresa, $cliente): Response
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        return Inertia::render('Clientes/VinculosPermissoesDetalhes', [
+            'empresa_id' => (int) $empresa,
+            'cliente' => $this->montarDetalhesClienteVinculos($empresa, $cliente),
+        ]);
+    }
+
+    public function vinculosPermissoesDetalhes($empresa, $cliente): JsonResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        return response()->json([
+            'cliente' => $this->montarDetalhesClienteVinculos($empresa, $cliente),
         ]);
     }
 
