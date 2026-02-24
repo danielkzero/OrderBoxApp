@@ -193,6 +193,15 @@ Route::prefix('{empresa}')->middleware('auth')->group(function () {
     Route::get('clientes/vinculos-permissoes', [ClientesController::class, 'vinculosPermissoes'])
         ->where(['empresa' => '[0-9]+'])
         ->name('clientes.vinculos');
+    Route::get('clientes/{cliente}/show', [ClientesController::class, 'vinculosPermissoesCliente'])
+        ->where(['empresa' => '[0-9]+', 'cliente' => '[0-9]+'])
+        ->name('clientes.vinculos.cliente');
+    Route::get('clientes/vinculos-permissoes/{cliente}', function ($empresa, $cliente) {
+        return redirect("/{$empresa}/clientes/{$cliente}/show");
+    })->where(['empresa' => '[0-9]+', 'cliente' => '[0-9]+']);
+    Route::get('clientes/vinculos-permissoes/{cliente}/detalhes', [ClientesController::class, 'vinculosPermissoesDetalhes'])
+        ->where(['empresa' => '[0-9]+', 'cliente' => '[0-9]+'])
+        ->name('clientes.vinculos.detalhes');
     Route::post('clientes/vinculos-permissoes', [ClientesController::class, 'atualizarVinculosPermissoes'])
         ->where(['empresa' => '[0-9]+'])
         ->name('clientes.vinculos.update');
@@ -202,6 +211,12 @@ Route::prefix('{empresa}')->middleware('auth')->group(function () {
     Route::post('produtos/importar-fotos', [ProdutosController::class, 'importarFotos'])
         ->where(['empresa' => '[0-9]+'])
         ->name('produtos.importar_fotos');
+    Route::get('produtos/importar', [ProdutosController::class, 'createImportacao'])
+        ->where(['empresa' => '[0-9]+'])
+        ->name('produtos.importacao.view');
+    Route::post('produtos/importar', [ProdutosController::class, 'importarProdutosPlanilha'])
+        ->where(['empresa' => '[0-9]+'])
+        ->name('produtos.importacao.store');
 
     Route::get('produtos/tabelas', [ProdutosController::class, 'index'])
         ->where(['empresa' => '[0-9]+'])
@@ -306,6 +321,15 @@ Route::prefix('{empresa}')->middleware('auth')->group(function () {
     Route::post('produtos/promocoes', [ProdutosController::class, 'storePromocao'])
         ->where(['empresa' => '[0-9]+'])
         ->name('produtos.promocoes.store');
+    Route::get('produtos/promocoes/nova', [ProdutosController::class, 'createPromocao'])
+        ->where(['empresa' => '[0-9]+'])
+        ->name('produtos.promocoes.create');
+    Route::get('produtos/promocoes/{promocao}/editar', [ProdutosController::class, 'editPromocao'])
+        ->where(['empresa' => '[0-9]+', 'promocao' => '[0-9]+'])
+        ->name('produtos.promocoes.edit');
+    Route::put('produtos/promocoes/{promocao}', [ProdutosController::class, 'updatePromocao'])
+        ->where(['empresa' => '[0-9]+', 'promocao' => '[0-9]+'])
+        ->name('produtos.promocoes.update');
     Route::delete('produtos/promocoes/{promocao}', [ProdutosController::class, 'destroyPromocao'])
         ->where(['empresa' => '[0-9]+', 'promocao' => '[0-9]+'])
         ->name('produtos.promocoes.destroy');
@@ -313,6 +337,12 @@ Route::prefix('{empresa}')->middleware('auth')->group(function () {
     Route::post('produtos/destaques', [ProdutosController::class, 'storeDestaque'])
         ->where(['empresa' => '[0-9]+'])
         ->name('produtos.destaques.store');
+    Route::get('produtos/destaques/novo', [ProdutosController::class, 'createDestaque'])
+        ->where(['empresa' => '[0-9]+'])
+        ->name('produtos.destaques.create');
+    Route::get('produtos/destaques/{destaque}/editar', [ProdutosController::class, 'editDestaque'])
+        ->where(['empresa' => '[0-9]+', 'destaque' => '[0-9]+'])
+        ->name('produtos.destaques.edit');
     Route::put('produtos/destaques/{destaque}', [ProdutosController::class, 'updateDestaque'])
         ->where(['empresa' => '[0-9]+', 'destaque' => '[0-9]+'])
         ->name('produtos.destaques.update');
