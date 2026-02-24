@@ -199,6 +199,51 @@ Route::prefix('{empresa}')->middleware('auth')->group(function () {
     Route::post('produtos/importar-fotos', [ProdutosController::class, 'importarFotos'])
         ->where(['empresa' => '[0-9]+'])
         ->name('produtos.importar_fotos');
+
+    Route::get('produtos/tabelas', [ProdutosController::class, 'index'])
+        ->where(['empresa' => '[0-9]+'])
+        ->defaults('tab', 'produtos')
+        ->defaults('sub', 'produtos_tabelas')
+        ->name('produtos.tabelas');
+    Route::get('produtos/gerenciar_estoque', [ProdutosController::class, 'index'])
+        ->where(['empresa' => '[0-9]+'])
+        ->defaults('tab', 'produtos')
+        ->defaults('sub', 'gerenciar_estoque')
+        ->name('produtos.gerenciar_estoque');
+    Route::get('produtos/importar_fotos', [ProdutosController::class, 'index'])
+        ->where(['empresa' => '[0-9]+'])
+        ->defaults('tab', 'produtos')
+        ->defaults('sub', 'importar_fotos')
+        ->name('produtos.importar_fotos.view');
+    Route::get('produtos/promocoes', [ProdutosController::class, 'index'])
+        ->where(['empresa' => '[0-9]+'])
+        ->defaults('tab', 'promocoes')
+        ->name('produtos.promocoes.view');
+    Route::get('produtos/destaques', [ProdutosController::class, 'index'])
+        ->where(['empresa' => '[0-9]+'])
+        ->defaults('tab', 'destaques')
+        ->name('produtos.destaques.view');
+    Route::get('produtos/configuracoes/categorias', [ProdutosController::class, 'index'])
+        ->where(['empresa' => '[0-9]+'])
+        ->defaults('tab', 'configuracoes')
+        ->defaults('sub', 'categorias')
+        ->name('produtos.config.categorias.view');
+    Route::get('produtos/configuracoes/variacoes', [ProdutosController::class, 'index'])
+        ->where(['empresa' => '[0-9]+'])
+        ->defaults('tab', 'configuracoes')
+        ->defaults('sub', 'variacoes')
+        ->name('produtos.config.variacoes.view');
+    Route::get('produtos/configuracoes/inatividade', [ProdutosController::class, 'index'])
+        ->where(['empresa' => '[0-9]+'])
+        ->defaults('tab', 'configuracoes')
+        ->defaults('sub', 'inatividade')
+        ->name('produtos.config.inatividade.view');
+    Route::get('produtos/configuracoes/tributacoes', [ProdutosController::class, 'index'])
+        ->where(['empresa' => '[0-9]+'])
+        ->defaults('tab', 'configuracoes')
+        ->defaults('sub', 'tributacoes')
+        ->name('produtos.config.tributacoes.view');
+
     Route::post('produtos/{produto}/imagens', [ProdutosController::class, 'storeImagemProduto'])
         ->where(['empresa' => '[0-9]+', 'produto' => '[0-9]+'])
         ->name('produtos.imagens.store');
@@ -238,6 +283,12 @@ Route::prefix('{empresa}')->middleware('auth')->group(function () {
     Route::post('produtos/configuracoes/inatividade', [ProdutosController::class, 'salvarInatividade'])
         ->where(['empresa' => '[0-9]+'])
         ->name('produtos.config.inatividade.save');
+    Route::post('produtos/configuracoes/gerenciar_estoque', [ProdutosController::class, 'salvarGerenciarEstoque'])
+        ->where(['empresa' => '[0-9]+'])
+        ->name('produtos.config.estoque.save');
+    Route::post('produtos/estoque/movimentos', [ProdutosController::class, 'salvarMovimentoEstoque'])
+        ->where(['empresa' => '[0-9]+'])
+        ->name('produtos.estoque.movimentos.store');
 
     Route::post('produtos/configuracoes/tributacoes', [ProdutosController::class, 'storeTributacao'])
         ->where(['empresa' => '[0-9]+'])
