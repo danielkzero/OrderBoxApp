@@ -193,6 +193,9 @@ Route::prefix('{empresa}')->middleware('auth')->group(function () {
     Route::get('clientes/vinculos-permissoes', [ClientesController::class, 'vinculosPermissoes'])
         ->where(['empresa' => '[0-9]+'])
         ->name('clientes.vinculos');
+    Route::post('clientes/vinculos-permissoes', [ClientesController::class, 'atualizarVinculosPermissoes'])
+        ->where(['empresa' => '[0-9]+'])
+        ->name('clientes.vinculos.update');
 
     Route::resource('clientes', ClientesController::class)->where(['empresa' => '[0-9]+']);
 
