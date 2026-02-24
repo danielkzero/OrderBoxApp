@@ -39,6 +39,15 @@
     <div v-if="Object.keys(form.errors).length" class="box error-box">
       Verifique os campos obrigatorios antes de salvar.
     </div>
+    <div v-if="alertasEstoque.length" class="box error-box">
+      <p class="font-semibold mb-2">Aviso de estoque:</p>
+      <ul class="list-disc list-inside">
+        <li v-for="alerta in alertasEstoque" :key="alerta.produto_id">
+          {{ alerta.nome }} - solicitado {{ alerta.solicitado }}, disponivel {{ alerta.disponivel }}.
+          Sugestao: {{ alerta.sugerido }}.
+        </li>
+      </ul>
+    </div>
 
     <section class="box etapa">
       <div class="etapa-title"><i class="bx bx-store"></i> Cliente</div>
@@ -131,6 +140,7 @@
               </div>
             </div>
             <div class="text-sm text-green-700">{{ formatCurrency(toNumber(produto.preco_tabela)) }}</div>
+            <div v-if="gerenciarEstoqueAtivo" class="text-xs text-gray-500">Estoque: {{ formatarEstoque(produto.saldo_estoque) }}</div>
           </div>
         </button>
       </div>
@@ -165,10 +175,14 @@
                     v-model.number="item.quantidade"
                     type="number"
                     min="1"
+                    :max="gerenciarEstoqueAtivo ? estoqueDisponivelParaItem(item) : null"
                     class="input-mini"
                     @input="recalcularItem(item)"
                   />
-                  <small>{{ item.unidade || 'UN' }}</small>
+                  <small>
+                    {{ item.unidade || 'UN' }}
+                    <span v-if="gerenciarEstoqueAtivo"> | Disp: {{ formatarEstoque(estoqueDisponivelParaItem(item)) }}</span>
+                  </small>
                 </div>
               </td>
               <td>{{ formatCurrency(toNumber(item.preco_tabela)) }}</td>
@@ -401,6 +415,8 @@ const produtos = page.props.produtos || [];
 const formasPagamentos = page.props.formas_pagamentos || [];
 const condicoesPagamentos = page.props.condicoes_pagamentos || [];
 const tiposPedidos = page.props.tipos_pedidos || [];
+const estoqueConfig = page.props.estoque_config || {};
+const gerenciarEstoqueAtivo = Boolean(estoqueConfig.gerenciar_estoque);
 const authUser = page.props.auth?.user || null;
 const empresas = page.props.empresas || [];
 const exportConfigInicial = page.props.export_config || null;
@@ -548,6 +564,10 @@ const produtosFiltrados = computed(() => {
   if (!termo) return [];
 
   const base = produtos.filter((produto) => {
+    if (gerenciarEstoqueAtivo && toNumber(produto.saldo_estoque) <= 0) {
+      return false;
+    }
+
     const nome = String(produto.nome || '').toLowerCase();
     const codigo = String(produto.codigo || '').toLowerCase();
     return nome.includes(termo) || codigo.includes(termo);
@@ -592,6 +612,43 @@ const pedidoPreview = computed(() => ({
   valor_frete: form.valor_frete,
 }));
 
+const produtoPorId = computed(() => {
+  const mapa = new Map();
+  produtos.forEach((produto) => {
+    mapa.set(Number(produto.id), produto);
+  });
+  return mapa;
+});
+
+const quantidadeOriginalPorProduto = computed(() => {
+  const mapa = new Map();
+  (pedidoInicial?.itens || []).forEach((item) => {
+    const produtoId = Number(item.produto_id);
+    const quantidade = toNumber(item.quantidade);
+    mapa.set(produtoId, (mapa.get(produtoId) || 0) + quantidade);
+  });
+  return mapa;
+});
+
+const alertasEstoque = computed(() => {
+  if (!gerenciarEstoqueAtivo) return [];
+
+  return form.itens
+    .map((item) => {
+      const disponivel = toNumber(estoqueDisponivelParaItem(item));
+      const solicitado = toNumber(item.quantidade);
+      if (solicitado <= disponivel) return null;
+      return {
+        produto_id: item.produto_id,
+        nome: item.nome || `Produto #${item.produto_id}`,
+        solicitado,
+        disponivel,
+        sugerido: Math.max(0, Math.floor(disponivel)),
+      };
+    })
+    .filter(Boolean);
+});
+
 watch(
   () => form.cliente_id,
   (clienteId) => {
@@ -624,6 +681,20 @@ function formatarPercentual(values, type) {
   return values.map((v) => `${symbol}${toNumber(v).toFixed(2)}%`).join(' ');
 }
 
+function formatarEstoque(value) {
+  return Math.max(0, Math.floor(toNumber(value)));
+}
+
+function estoqueDisponivelParaItem(item) {
+  if (!gerenciarEstoqueAtivo) return Number.MAX_SAFE_INTEGER;
+
+  const produtoId = Number(item.produto_id);
+  const produtoAtual = produtoPorId.value.get(produtoId);
+  const saldoAtual = toNumber(produtoAtual?.saldo_estoque);
+  const reservadoOriginal = toNumber(quantidadeOriginalPorProduto.value.get(produtoId) || 0);
+  return Math.max(0, Math.floor(saldoAtual + reservadoOriginal));
+}
+
 function selecionarCliente(cliente) {
   form.cliente_id = cliente.id;
   clienteBusca.value = cliente.razao_social || '';
@@ -648,6 +719,11 @@ function calcularPrecoComAjustes(item) {
 }
 
 function adicionarProduto(produto) {
+  if (gerenciarEstoqueAtivo && toNumber(produto.saldo_estoque) <= 0) {
+    window.alert(`Sem estoque para ${produto.nome}.`);
+    return;
+  }
+
   const itemExistente = form.itens.find((item) => Number(item.produto_id) === Number(produto.id));
 
   if (itemExistente) {
@@ -761,6 +837,14 @@ function atualizarDescontoItem({ discounts, increases }) {
 }
 
 function salvar(status = null) {
+  if (gerenciarEstoqueAtivo && alertasEstoque.value.length) {
+    const lista = alertasEstoque.value
+      .map((item) => `${item.nome} (disp: ${item.disponivel}, solicitado: ${item.solicitado})`)
+      .join('; ');
+    window.alert(`Estoque insuficiente para: ${lista}`);
+    return;
+  }
+
   if (status) form.status = status;
 
   form
