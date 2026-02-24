@@ -1,47 +1,17 @@
 ﻿<template>
-  <div class="space-y-6 bg-white dark:bg-gray-800 px-4 pb-4 rounded-sm shadow">
-    <div class="border-b border-gray-200 dark:border-gray-700">
-      <nav class="-mb-px flex space-x-8">
-        <Link
-          v-for="tab in mainTabs"
-          :key="tab.id"
-          :href="tab.url"
-          @click="activeMainTab = tab.id"
-          class="flex items-center space-x-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
-          :class="activeMainTab === tab.id
-            ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
-        >
-          <i :class="tab.icon + ' text-lg'"></i>
-          <span>{{ tab.label }}</span>
-        </Link>
-      </nav>
-    </div>
+  <ProdutosPageShell
+    :main-tabs="mainTabs"
+    :active-main-tab="activeMainTab"
+    :sub-tabs="subTabsAtivas"
+    :active-sub-tab="activeSubTab"
+  >
 
     <div v-if="activeMainTab === 'produtos'">
-      <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
-        <nav class="flex space-x-2">
-          <Link
-            v-for="sub in produtosTabs"
-            :key="sub.id"
-            :href="sub.url"
-            @click="activeProdutosTab = sub.id"
-            class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
-            :class="activeProdutosTab === sub.id
-              ? 'text-indigo-700 dark:text-white border-b-2'
-              : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'"
-          >
-            <i :class="sub.icon + ' text-base'"></i>
-            <span>{{ sub.label }}</span>
-          </Link>
-        </nav>
-      </div>
-
-      <div class="mt-4">
+      <div>
         <div v-if="activeProdutosTab === 'produtos_tabelas'">
           <div class="flex space-x-2 mb-3">
             <ButtonCustom icon="bx-plus" text="Cadastrar produto" :url="`/${empresaId}/produtos/create`" :outline="false" />
-            <ButtonCustom icon="bx-import" text="Importar produtos" :url="`/${empresaId}/produtos/import`" :outline="true" />
+            <ButtonCustom icon="bx-import" text="Importar produtos" :url="`/${empresaId}/produtos/importar`" :outline="true" />
           </div>
 
           <div class="text-gray-800 dark:text-gray-50">
@@ -232,33 +202,57 @@
     </div>
 
     <div v-else-if="activeMainTab === 'promocoes'">
-      <ButtonCustom icon="bx-plus" text="Nova promocao" :url="`/${empresaId}/produtos/create`" :outline="false" />
+      <div class="space-y-4">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-xl font-semibold text-gray-800">Promocoes</h2>
+          <ButtonCustom icon="bx-plus" text="Nova promocao" :url="`/${empresaId}/produtos/promocoes/nova`" :outline="false" />
+        </div>
+
+        <div v-if="promocoes.length" class="rounded-lg border border-gray-200 bg-white p-4">
+          <DataTable :columns="colunasPromocoes" :data="promocoes">
+            <template #cell-nome="{ row }">
+              <Link :href="`/${empresaId}/produtos/promocoes/${row.id}/editar`" class="font-medium text-indigo-700 hover:underline">
+                {{ row.nome }}
+              </Link>
+            </template>
+            <template #cell-data_inicio="{ row }">{{ formatarData(row.data_inicio) }}</template>
+            <template #cell-data_fim="{ row }">{{ formatarData(row.data_fim) }}</template>
+          </DataTable>
+        </div>
+
+        <div v-else class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+          Nenhuma promocao cadastrada ainda.
+        </div>
+      </div>
     </div>
 
     <div v-else-if="activeMainTab === 'destaques'">
-      <ButtonCustom icon="bx-plus" text="Novo destaque" :url="`/${empresaId}/produtos/create`" :outline="false" />
+      <div class="space-y-4">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-xl font-semibold text-gray-800">Destaques</h2>
+          <ButtonCustom icon="bx-plus" text="Novo destaque" :url="`/${empresaId}/produtos/destaques/novo`" :outline="false" />
+        </div>
+
+        <div v-if="destaques.length" class="rounded-lg border border-gray-200 bg-white p-4">
+          <DataTable :columns="colunasDestaques" :data="destaques">
+            <template #cell-nome="{ row }">
+              <Link :href="`/${empresaId}/produtos/destaques/${row.id}/editar`" class="font-medium text-indigo-700 hover:underline">
+                {{ row.nome }}
+              </Link>
+            </template>
+            <template #cell-data_inicio="{ row }">{{ formatarData(row.data_inicio) }}</template>
+            <template #cell-data_fim="{ row }">{{ formatarData(row.data_fim) }}</template>
+          </DataTable>
+        </div>
+
+        <div v-else class="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+          Nenhum destaque cadastrado ainda.
+        </div>
+      </div>
     </div>
 
     <div v-else-if="activeMainTab === 'configuracoes'">
-      <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
-        <nav class="flex space-x-2">
-          <Link
-            v-for="sub in configTabs"
-            :key="sub.id"
-            :href="sub.url"
-            @click="activeConfigTab = sub.id"
-            class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
-            :class="activeConfigTab === sub.id
-              ? 'text-indigo-700 dark:text-white border-b-2'
-              : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'"
-          >
-            <i :class="sub.icon + ' text-base'"></i>
-            <span>{{ sub.label }}</span>
-          </Link>
-        </nav>
-      </div>
-
-      <div class="mt-4">
+      <div>
         <div v-if="activeConfigTab === 'categorias'">
           <ButtonCustom icon="bx-plus" text="Nova categoria" :url="`/${empresaId}/produtos/create`" :outline="false" />
         </div>
@@ -276,7 +270,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </ProdutosPageShell>
 </template>
 
 <script setup>
@@ -286,6 +280,7 @@ import DataTable from "@/components/DataTable.vue";
 import { usePage, Link, router } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
 import { formatCurrency } from "@/lib/utils";
+import ProdutosPageShell from "@/pages/Produtos/components/ProdutosPageShell.vue";
 
 const page = usePage();
 const fileInput = ref(null);
@@ -316,6 +311,8 @@ const initialMainTab = String(page.props.active_tab || "produtos");
 const initialSubTab = String(page.props.active_sub_tab || "produtos_tabelas");
 
 const produtos = computed(() => (Array.isArray(page.props.produtos) ? page.props.produtos : []));
+const promocoes = computed(() => (Array.isArray(page.props.promocoes) ? page.props.promocoes : []));
+const destaques = computed(() => (Array.isArray(page.props.destaques) ? page.props.destaques : []));
 const tabelasPrecos = computed(() => (Array.isArray(page.props.tabelas_precos) ? page.props.tabelas_precos : []));
 const movimentosEstoqueGeral = computed(() => (Array.isArray(page.props.movimentos_estoque_geral) ? page.props.movimentos_estoque_geral : []));
 const limiteHistoricoGeral = computed(() => Number(page.props.estoque_limites?.historico_geral || 300));
@@ -355,6 +352,18 @@ const colunasMovimento = [
   { label: "Usuario", key: "usuario_nome", sortable: false },
   { label: "Obs", key: "observacoes", sortable: false },
 ];
+const colunasPromocoes = [
+  { label: "Nome da promocao", key: "nome" },
+  { label: "Inicio", key: "data_inicio" },
+  { label: "Termino", key: "data_fim" },
+  { label: "Situacao", key: "situacao" },
+];
+const colunasDestaques = [
+  { label: "Destaque no catalogo", key: "nome" },
+  { label: "Inicio", key: "data_inicio" },
+  { label: "Termino", key: "data_fim" },
+  { label: "Situacao", key: "situacao" },
+];
 
 const movimentosProdutoSelecionado = computed(() => {
   if (!movimentoForm.value.produto_id) return [];
@@ -368,14 +377,14 @@ const mainTabs = [
   { id: "destaques", label: "Destaques", icon: "bx bx-star", url: `/${empresaId}/produtos/destaques` },
   { id: "configuracoes", label: "Configurações", icon: "bx bx-cog", url: `/${empresaId}/produtos/configuracoes/categorias` },
 ];
-const activeMainTab = ref(initialMainTab);
+const activeMainTab = initialMainTab;
 
 const produtosTabs = [
   { id: "produtos_tabelas", label: "Produtos e Tabelas", icon: "bx bx-list-ul", url: `/${empresaId}/produtos/tabelas` },
   { id: "gerenciar_estoque", label: "Gerenciar Estoque", icon: "bx bx-store", url: `/${empresaId}/produtos/gerenciar_estoque` },
   { id: "importar_fotos", label: "Importar Fotos", icon: "bx bx-image-add", url: `/${empresaId}/produtos/importar_fotos` },
 ];
-const activeProdutosTab = ref(initialMainTab === "produtos" ? initialSubTab : "produtos_tabelas");
+const activeProdutosTab = initialMainTab === "produtos" ? initialSubTab : "produtos_tabelas";
 
 const configTabs = [
   { id: "categorias", label: "Categorias", icon: "bx bx-category", url: `/${empresaId}/produtos/configuracoes/categorias` },
@@ -383,7 +392,17 @@ const configTabs = [
   { id: "inatividade", label: "Período de Inatividade", icon: "bx bx-time", url: `/${empresaId}/produtos/configuracoes/inatividade` },
   { id: "tributacoes", label: "Tributações", icon: "bx bx-receipt", url: `/${empresaId}/produtos/configuracoes/tributacoes` },
 ];
-const activeConfigTab = ref(initialMainTab === "configuracoes" ? initialSubTab : "categorias");
+const activeConfigTab = initialMainTab === "configuracoes" ? initialSubTab : "categorias";
+const subTabsAtivas = computed(() => {
+  if (activeMainTab === "produtos") return produtosTabs;
+  if (activeMainTab === "configuracoes") return configTabs;
+  return [];
+});
+const activeSubTab = computed(() => {
+  if (activeMainTab === "produtos") return activeProdutosTab;
+  if (activeMainTab === "configuracoes") return activeConfigTab;
+  return "";
+});
 
 const columns = computed(() => [
   { label: "Fotos", key: "fotos" },
@@ -433,32 +452,75 @@ function handleDrop(event) {
   enviarFotos(files);
 }
 
-function enviarFotos(files) {
+function enviarLoteFotos(filesLote) {
+  return new Promise((resolve) => {
+    router.post(`/${empresaId}/produtos/importar-fotos`, {
+      files: filesLote,
+    }, {
+      preserveScroll: true,
+      preserveState: true,
+      forceFormData: true,
+      onSuccess: () => resolve({ ok: true }),
+      onError: (errors) => {
+        const mensagens = Object.values(errors || {}).flat().filter(Boolean);
+        resolve({ ok: false, error: mensagens[0] || "Nao foi possivel importar este lote de fotos." });
+      },
+    });
+  });
+}
+
+async function enviarFotos(files) {
   if (!files.length || importandoFotos.value) return;
 
   importFeedback.value = "";
   importErro.value = "";
+  importandoFotos.value = true;
 
-  router.post(`/${empresaId}/produtos/importar-fotos`, {
-    files,
-  }, {
-    preserveScroll: true,
-    preserveState: true,
-    forceFormData: true,
-    onStart: () => {
-      importandoFotos.value = true;
-    },
-    onSuccess: () => {
-      importFeedback.value = "Importacao de fotos concluida.";
-    },
-    onError: (errors) => {
-      const mensagens = Object.values(errors || {}).flat().filter(Boolean);
-      importErro.value = mensagens[0] || "Nao foi possivel importar as fotos.";
-    },
-    onFinish: () => {
-      importandoFotos.value = false;
-    },
+  const maxArquivosPorLote = 3;
+  const maxBytesPorLote = 8 * 1024 * 1024;
+  const lotes = [];
+  let loteAtual = [];
+  let bytesLoteAtual = 0;
+
+  files.forEach((file) => {
+    const fileSize = Number(file?.size || 0);
+    const excedeQuantidade = loteAtual.length >= maxArquivosPorLote;
+    const excedeTamanho = loteAtual.length > 0 && (bytesLoteAtual + fileSize) > maxBytesPorLote;
+
+    if (excedeQuantidade || excedeTamanho) {
+      lotes.push(loteAtual);
+      loteAtual = [];
+      bytesLoteAtual = 0;
+    }
+
+    loteAtual.push(file);
+    bytesLoteAtual += fileSize;
   });
+
+  if (loteAtual.length > 0) {
+    lotes.push(loteAtual);
+  }
+
+  let lotesComErro = 0;
+  let primeiraMensagemErro = "";
+
+  for (let i = 0; i < lotes.length; i += 1) {
+    importFeedback.value = `Importando lote ${i + 1} de ${lotes.length}...`;
+    const resultado = await enviarLoteFotos(lotes[i]);
+    if (!resultado.ok) {
+      lotesComErro += 1;
+      if (!primeiraMensagemErro) primeiraMensagemErro = resultado.error || "";
+    }
+  }
+
+  if (lotesComErro > 0) {
+    importErro.value = primeiraMensagemErro || `Falha em ${lotesComErro} lote(s).`;
+    importFeedback.value = `Importacao concluida com ${lotesComErro} lote(s) com erro.`;
+  } else {
+    importFeedback.value = "Importacao de fotos concluida.";
+  }
+
+  importandoFotos.value = false;
 }
 
 function salvarConfigEstoque() {
@@ -503,6 +565,19 @@ function formatarDataHora(valor) {
       hour: "2-digit",
       minute: "2-digit",
     }).format(new Date(valor));
+  } catch {
+    return String(valor);
+  }
+}
+
+function formatarData(valor) {
+  if (!valor) return "-";
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(`${valor}T00:00:00`));
   } catch {
     return String(valor);
   }
