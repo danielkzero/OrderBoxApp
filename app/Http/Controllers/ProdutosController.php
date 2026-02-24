@@ -8,6 +8,7 @@ use App\Models\Produtos;
 use App\Models\ProdutosConfiguracoesGerais;
 use App\Models\ProdutosDestaques;
 use App\Models\ProdutosDestaquesItens;
+use App\Models\ProdutosEstoqueMovimentos;
 use App\Models\ProdutosImagens;
 use App\Models\ProdutosPrecos;
 use App\Models\ProdutosPromocoes;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -302,8 +304,19 @@ class ProdutosController extends Controller
     {
         $this->validarAcessoEmpresa($empresa);
 
-        $tab = request()->query('tab', 'produtos');
-        $subTab = request()->query('sub', 'produtos_tabelas');
+        $tab = request()->route('tab') ?? request()->query('tab', 'produtos');
+        $subTab = request()->route('sub') ?? request()->query('sub', 'produtos_tabelas');
+
+        $tabsValidas = ['produtos', 'promocoes', 'destaques', 'configuracoes'];
+        $subsValidas = ['produtos_tabelas', 'gerenciar_estoque', 'importar_fotos', 'categorias', 'variacoes', 'inatividade', 'tributacoes'];
+
+        if (!in_array($tab, $tabsValidas, true)) {
+            $tab = 'produtos';
+        }
+
+        if (!in_array($subTab, $subsValidas, true)) {
+            $subTab = $tab === 'configuracoes' ? 'categorias' : 'produtos_tabelas';
+        }
         $destaqueId = request()->query('destaque_id');
 
         $produtos = Produtos::with([
@@ -390,8 +403,35 @@ class ProdutosController extends Controller
         $configuracoesGerais = ProdutosConfiguracoesGerais::query()
             ->firstOrCreate(
                 ['empresa_id' => (int) $empresa],
-                ['inativos_recentes_dias' => 180, 'inativos_antigos_dias' => 365]
+                ['inativos_recentes_dias' => 180, 'inativos_antigos_dias' => 365, 'gerenciar_estoque' => false]
             );
+
+        $limiteHistoricoGeral = 300;
+
+        $movimentosEstoque = ProdutosEstoqueMovimentos::query()
+            ->with([
+                'produto:id,empresa_id,codigo,nome',
+                'user:id,name',
+            ])
+            ->where('empresa_id', $empresa)
+            ->orderByDesc('id')
+            ->limit($limiteHistoricoGeral)
+            ->get()
+            ->map(fn($movimento) => [
+                'id' => $movimento->id,
+                'produto_id' => $movimento->produto_id,
+                'produto_nome' => $movimento->produto?->nome,
+                'produto_codigo' => $movimento->produto?->codigo,
+                'tipo' => $movimento->tipo,
+                'quantidade' => (float) $movimento->quantidade,
+                'saldo_anterior' => (float) ($movimento->saldo_anterior ?? 0),
+                'saldo_atual' => (float) ($movimento->saldo_atual ?? 0),
+                'observacoes' => $movimento->observacoes,
+                'origem' => $movimento->origem,
+                'usuario_nome' => $movimento->user?->name,
+                'created_at' => $movimento->created_at,
+            ])
+            ->values();
 
         return Inertia::render('Produtos/Index', [
             'produtos' => $produtos,
@@ -404,6 +444,10 @@ class ProdutosController extends Controller
             'destaques' => $destaques,
             'destaque_ativo' => $destaqueAtivo,
             'configuracoes_gerais' => $configuracoesGerais,
+            'movimentos_estoque_geral' => $movimentosEstoque,
+            'estoque_limites' => [
+                'historico_geral' => $limiteHistoricoGeral,
+            ],
             'active_tab' => $tab,
             'active_sub_tab' => $subTab,
             'base_url' => $this->baseUrl($empresa),
@@ -813,6 +857,111 @@ class ProdutosController extends Controller
         );
 
         return back()->with('success', 'Configuracao de inatividade salva com sucesso.');
+    }
+
+    public function salvarGerenciarEstoque(Request $request, $empresa)
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $validated = $request->validate([
+            'gerenciar_estoque' => ['required', 'boolean'],
+        ]);
+
+        $gerenciarEstoque = (bool) $validated['gerenciar_estoque'];
+
+        ProdutosConfiguracoesGerais::updateOrCreate(
+            ['empresa_id' => (int) $empresa],
+            [
+                'gerenciar_estoque' => $gerenciarEstoque,
+                'ultima_alteracao' => now(),
+            ]
+        );
+
+        if ($gerenciarEstoque) {
+            Produtos::query()
+                ->where('empresa_id', $empresa)
+                ->where('excluido', false)
+                ->where(fn($q) => $q->whereNull('saldo_estoque')->orWhere('saldo_estoque', '<=', 0))
+                ->update([
+                    'ativo' => false,
+                    'ultima_alteracao' => now(),
+                ]);
+        }
+
+        return back()->with('success', $gerenciarEstoque
+            ? 'Controle de estoque habilitado com sucesso.'
+            : 'Controle de estoque desabilitado com sucesso.');
+    }
+
+    public function salvarMovimentoEstoque(Request $request, $empresa): RedirectResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $validated = $request->validate([
+            'produto_id' => [
+                'required',
+                Rule::exists('produtos', 'id')->where(fn($q) => $q
+                    ->where('empresa_id', (int) $empresa)
+                    ->where('excluido', false)),
+            ],
+            'tipo' => ['required', Rule::in(['entrada', 'saida'])],
+            'quantidade' => ['required', 'numeric', 'gt:0'],
+            'observacoes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        DB::transaction(function () use ($validated, $empresa) {
+            $produto = Produtos::query()
+                ->where('empresa_id', $empresa)
+                ->where('excluido', false)
+                ->lockForUpdate()
+                ->findOrFail((int) $validated['produto_id']);
+
+            $saldoAnterior = (float) ($produto->saldo_estoque ?? 0);
+            $quantidade = (float) $validated['quantidade'];
+            $tipo = $validated['tipo'];
+
+            if ($tipo === 'saida' && $saldoAnterior < $quantidade) {
+                throw ValidationException::withMessages([
+                    'quantidade' => sprintf(
+                        'Estoque insuficiente. Saldo disponivel para %s: %s.',
+                        $produto->nome,
+                        number_format($saldoAnterior, 2, ',', '.')
+                    ),
+                ]);
+            }
+
+            $saldoAtual = $tipo === 'entrada'
+                ? $saldoAnterior + $quantidade
+                : $saldoAnterior - $quantidade;
+
+            $saldoAtual = max(0, $saldoAtual);
+            $gerenciarEstoqueAtivo = (bool) ProdutosConfiguracoesGerais::query()
+                ->where('empresa_id', (int) $empresa)
+                ->value('gerenciar_estoque');
+
+            $produto->saldo_estoque = $saldoAtual;
+            $produto->ultima_alteracao = now();
+
+            if ($gerenciarEstoqueAtivo) {
+                $produto->ativo = $saldoAtual > 0;
+            }
+
+            $produto->save();
+
+            ProdutosEstoqueMovimentos::create([
+                'empresa_id' => (int) $empresa,
+                'produto_id' => (int) $produto->id,
+                'user_id' => Auth::id(),
+                'tipo' => $tipo,
+                'quantidade' => $quantidade,
+                'saldo_anterior' => $saldoAnterior,
+                'saldo_atual' => $saldoAtual,
+                'observacoes' => $validated['observacoes'] ?? null,
+                'origem' => 'manual',
+            ]);
+        });
+
+        return back()->with('success', 'Movimentacao de estoque registrada com sucesso.');
     }
 
     public function storeTributacao(Request $request, $empresa)
