@@ -4,41 +4,41 @@
       <nav class="-mb-px flex space-x-8">
         <Link
           v-for="tab in mainTabs"
-          :key="tab.name"
+          :key="tab.id"
           :href="tab.url"
-          @click="activeMainTab = tab.name"
+          @click="activeMainTab = tab.id"
           class="flex items-center space-x-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
-          :class="activeMainTab === tab.name
+          :class="activeMainTab === tab.id
             ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'"
         >
           <i :class="tab.icon + ' text-lg'"></i>
-          <span>{{ tab.name }}</span>
+          <span>{{ tab.label }}</span>
         </Link>
       </nav>
     </div>
 
-    <div v-if="activeMainTab === 'Produtos'">
+    <div v-if="activeMainTab === 'produtos'">
       <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
         <nav class="flex space-x-2">
           <Link
             v-for="sub in produtosTabs"
-            :key="sub.name"
+            :key="sub.id"
             :href="sub.url"
-            @click="activeProdutosTab = sub.name"
+            @click="activeProdutosTab = sub.id"
             class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
-            :class="activeProdutosTab === sub.name
+            :class="activeProdutosTab === sub.id
               ? 'text-indigo-700 dark:text-white border-b-2'
               : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'"
           >
             <i :class="sub.icon + ' text-base'"></i>
-            <span>{{ sub.name }}</span>
+            <span>{{ sub.label }}</span>
           </Link>
         </nav>
       </div>
 
       <div class="mt-4">
-        <div v-if="activeProdutosTab === 'Produtos e Tabelas'">
+        <div v-if="activeProdutosTab === 'produtos_tabelas'">
           <div class="flex space-x-2 mb-3">
             <ButtonCustom icon="bx-plus" text="Cadastrar produto" :url="`/${empresaId}/produtos/create`" :outline="false" />
             <ButtonCustom icon="bx-import" text="Importar produtos" :url="`/${empresaId}/produtos/import`" :outline="true" />
@@ -67,17 +67,143 @@
           </div>
         </div>
 
-        <div v-else-if="activeProdutosTab === 'Gerenciar Estoque'">
-          <ButtonCustom icon="bx-plus" text="Habilitar gerencia de estoque" :url="`/${empresaId}/produtos/create`" :outline="false" />
+        <div v-else-if="activeProdutosTab === 'gerenciar_estoque'">
+          <div class="rounded-lg border border-gray-200 bg-white p-5">
+            <h3 class="text-lg font-semibold text-gray-800">Controle de estoque em pedidos</h3>
+            <p class="mt-2 text-sm text-gray-600">
+              Quando habilitado, o sistema valida saldo antes de salvar o pedido, informa indisponibilidade e baixa/estorna estoque automaticamente.
+            </p>
+
+            <label class="mt-4 inline-flex items-center gap-3 text-sm font-medium text-gray-700">
+              <input v-model="estoqueGerenciado" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600" />
+              Habilitar gerenciamento de estoque
+            </label>
+
+            <div class="mt-4">
+              <button
+                type="button"
+                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-70"
+                :disabled="salvandoEstoque"
+                @click="salvarConfigEstoque"
+              >
+                {{ salvandoEstoque ? "Salvando..." : "Salvar configuracao" }}
+              </button>
+            </div>
+
+            <p v-if="feedbackEstoque" class="mt-3 text-sm text-green-600">{{ feedbackEstoque }}</p>
+            <p v-if="erroEstoque" class="mt-3 text-sm text-red-600">{{ erroEstoque }}</p>
+          </div>
+
+          <div class="mt-4 rounded-lg border border-gray-200 bg-white p-5">
+            <h4 class="text-base font-semibold text-gray-800">Lancar movimentacao</h4>
+            <div class="mt-3 grid gap-3 md:grid-cols-4">
+              <div class="md:col-span-2">
+                <label class="mb-1 block text-sm font-medium text-gray-700">Produto</label>
+                <input
+                  v-model="buscaProdutoMovimento"
+                  type="text"
+                  placeholder="Digite codigo ou nome do produto"
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  @focus="mostrarSugestoesProduto = true"
+                />
+                <div v-if="mostrarSugestoesProduto && produtosSugeridosMovimento.length" class="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white">
+                  <button
+                    v-for="produto in produtosSugeridosMovimento"
+                    :key="produto.id"
+                    type="button"
+                    class="block w-full border-b border-gray-100 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                    @click="selecionarProdutoMovimento(produto)"
+                  >
+                    {{ produto.codigo ? `${produto.codigo} - ` : "" }}{{ produto.nome }} (saldo: {{ formatarSaldo(produto.saldo_estoque) }})
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700">Tipo</label>
+                <select v-model="movimentoForm.tipo" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                  <option value="entrada">Entrada</option>
+                  <option value="saida">Saida</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700">Quantidade</label>
+                <input v-model="movimentoForm.quantidade" type="number" min="0.01" step="0.01" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+
+              <div class="md:col-span-4">
+                <label class="mb-1 block text-sm font-medium text-gray-700">Observacoes</label>
+                <input v-model="movimentoForm.observacoes" type="text" maxlength="1000" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+              </div>
+            </div>
+
+            <div v-if="produtoSelecionadoMovimento" class="mt-3 text-sm text-gray-700">
+              Produto selecionado: <strong>{{ produtoSelecionadoMovimento.codigo ? `${produtoSelecionadoMovimento.codigo} - ` : "" }}{{ produtoSelecionadoMovimento.nome }}</strong>
+              | Saldo atual: <strong>{{ formatarSaldo(produtoSelecionadoMovimento.saldo_estoque) }}</strong>
+            </div>
+
+            <div class="mt-4">
+              <button
+                type="button"
+                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-70"
+                :disabled="salvandoMovimentoEstoque"
+                @click="salvarMovimentoEstoque"
+              >
+                {{ salvandoMovimentoEstoque ? "Lancando..." : "Lancar movimentacao" }}
+              </button>
+            </div>
+
+            <p v-if="feedbackMovimentoEstoque" class="mt-3 text-sm text-green-600">{{ feedbackMovimentoEstoque }}</p>
+            <p v-if="erroMovimentoEstoque" class="mt-3 text-sm text-red-600">{{ erroMovimentoEstoque }}</p>
+          </div>
+
+          <div class="mt-4 rounded-lg border border-gray-200 bg-white p-5">
+            <h4 class="text-base font-semibold text-gray-800">Historico do produto selecionado</h4>
+            <p class="mt-1 text-xs text-gray-500">Exibindo ate {{ limiteHistoricoGeral }} registros mais recentes da empresa.</p>
+            <div class="mt-3">
+              <DataTable :columns="colunasMovimento" :data="movimentosProdutoSelecionado" :enable-page-size="false">
+                <template #cell-data="{ row }">{{ formatarDataHora(row.created_at) }}</template>
+                <template #cell-produto="{ row }">{{ row.produto_codigo ? `${row.produto_codigo} - ` : "" }}{{ row.produto_nome || "-" }}</template>
+                <template #cell-tipo="{ row }">
+                  <span :class="row.tipo === 'entrada' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'">
+                    {{ row.tipo === "entrada" ? "Entrada" : "Saida" }}
+                  </span>
+                </template>
+                <template #cell-quantidade="{ row }">{{ formatarSaldo(row.quantidade) }}</template>
+                <template #cell-saldo_anterior="{ row }">{{ formatarSaldo(row.saldo_anterior) }}</template>
+                <template #cell-saldo_atual="{ row }">{{ formatarSaldo(row.saldo_atual) }}</template>
+              </DataTable>
+            </div>
+          </div>
+
+          <div class="mt-4 rounded-lg border border-gray-200 bg-white p-5">
+            <h4 class="text-base font-semibold text-gray-800">Historico geral de movimentacoes</h4>
+            <p class="mt-1 text-xs text-gray-500">Exibindo ate {{ limiteHistoricoGeral }} registros mais recentes da empresa.</p>
+            <div class="mt-3">
+              <DataTable :columns="colunasMovimento" :data="movimentosEstoqueGeral" :enable-page-size="false">
+                <template #cell-data="{ row }">{{ formatarDataHora(row.created_at) }}</template>
+                <template #cell-produto="{ row }">{{ row.produto_codigo ? `${row.produto_codigo} - ` : "" }}{{ row.produto_nome || "-" }}</template>
+                <template #cell-tipo="{ row }">
+                  <span :class="row.tipo === 'entrada' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'">
+                    {{ row.tipo === "entrada" ? "Entrada" : "Saida" }}
+                  </span>
+                </template>
+                <template #cell-quantidade="{ row }">{{ formatarSaldo(row.quantidade) }}</template>
+                <template #cell-saldo_anterior="{ row }">{{ formatarSaldo(row.saldo_anterior) }}</template>
+                <template #cell-saldo_atual="{ row }">{{ formatarSaldo(row.saldo_atual) }}</template>
+              </DataTable>
+            </div>
+          </div>
         </div>
 
-        <div v-else-if="activeProdutosTab === 'Importar Fotos'">
+        <div v-else-if="activeProdutosTab === 'importar_fotos'">
           <div
             class="relative w-full border-2 border-dashed border-gray-300 hover:border-indigo-500 rounded-xl bg-gray-50 dark:bg-gray-800 p-6 flex flex-col items-center justify-center text-center cursor-pointer transition"
             @dragover.prevent="isDragging = true"
             @dragleave.prevent="isDragging = false"
             @drop.prevent="handleDrop"
-            @click="triggerFileInput"
+            @click="!importandoFotos && triggerFileInput()"
           >
             <div
               v-if="isDragging"
@@ -98,51 +224,54 @@
 
             <input ref="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.gif,.webp" class="hidden" @change="handleFiles" />
           </div>
+          <p v-if="importandoFotos" class="mt-3 text-sm text-indigo-600">Importando fotos...</p>
+          <p v-if="importFeedback" class="mt-3 text-sm text-green-600">{{ importFeedback }}</p>
+          <p v-if="importErro" class="mt-3 text-sm text-red-600">{{ importErro }}</p>
         </div>
       </div>
     </div>
 
-    <div v-else-if="activeMainTab === 'Promoções'">
+    <div v-else-if="activeMainTab === 'promocoes'">
       <ButtonCustom icon="bx-plus" text="Nova promocao" :url="`/${empresaId}/produtos/create`" :outline="false" />
     </div>
 
-    <div v-else-if="activeMainTab === 'Destaques'">
+    <div v-else-if="activeMainTab === 'destaques'">
       <ButtonCustom icon="bx-plus" text="Novo destaque" :url="`/${empresaId}/produtos/create`" :outline="false" />
     </div>
 
-    <div v-else-if="activeMainTab === 'Configurações'">
+    <div v-else-if="activeMainTab === 'configuracoes'">
       <div class="bg-gray-100 dark:bg-gray-800 -mx-4 -mt-6">
         <nav class="flex space-x-2">
           <Link
             v-for="sub in configTabs"
-            :key="sub.name"
+            :key="sub.id"
             :href="sub.url"
-            @click="activeConfigTab = sub.name"
+            @click="activeConfigTab = sub.id"
             class="flex items-center space-x-2 px-3 py-1 text-sm font-medium"
-            :class="activeConfigTab === sub.name
+            :class="activeConfigTab === sub.id
               ? 'text-indigo-700 dark:text-white border-b-2'
               : 'text-gray-500 dark:text-white border-b-2 border-gray-100 hover:text-gray-700 hover:border-gray-300'"
           >
             <i :class="sub.icon + ' text-base'"></i>
-            <span>{{ sub.name }}</span>
+            <span>{{ sub.label }}</span>
           </Link>
         </nav>
       </div>
 
       <div class="mt-4">
-        <div v-if="activeConfigTab === 'Categorias'">
+        <div v-if="activeConfigTab === 'categorias'">
           <ButtonCustom icon="bx-plus" text="Nova categoria" :url="`/${empresaId}/produtos/create`" :outline="false" />
         </div>
 
-        <div v-else-if="activeConfigTab === 'Variações de Produto'">
+        <div v-else-if="activeConfigTab === 'variacoes'">
           <ButtonCustom icon="bx-plus" text="Nova variacao" :url="`/${empresaId}/produtos/create`" :outline="false" />
         </div>
 
-        <div v-else-if="activeConfigTab === 'Período de Inatividade'">
+        <div v-else-if="activeConfigTab === 'inatividade'">
           <ButtonCustom icon="bx-edit" text="Alterar periodo de inatividade" :url="`/${empresaId}/produtos/create`" :outline="false" />
         </div>
 
-        <div v-else-if="activeConfigTab === 'Tributações'">
+        <div v-else-if="activeConfigTab === 'tributacoes'">
           <ButtonCustom icon="bx-plus" text="Nova regra de calculo" :url="`/${empresaId}/produtos/create`" :outline="false" />
         </div>
       </div>
@@ -154,43 +283,107 @@
 import { computed, ref } from "vue";
 import ButtonCustom from "@/components/ButtonCustom.vue";
 import DataTable from "@/components/DataTable.vue";
-import { usePage, Link } from "@inertiajs/vue3";
+import { usePage, Link, router } from "@inertiajs/vue3";
 import AppLayout from "@/layouts/AppLayout.vue";
 import { formatCurrency } from "@/lib/utils";
 
+const page = usePage();
 const fileInput = ref(null);
 const isDragging = ref(false);
+const importandoFotos = ref(false);
+const importFeedback = ref("");
+const importErro = ref("");
+const estoqueGerenciado = ref(Boolean(page.props.configuracoes_gerais?.gerenciar_estoque));
+const salvandoEstoque = ref(false);
+const feedbackEstoque = ref("");
+const erroEstoque = ref("");
+const salvandoMovimentoEstoque = ref(false);
+const feedbackMovimentoEstoque = ref("");
+const erroMovimentoEstoque = ref("");
+const buscaProdutoMovimento = ref("");
+const mostrarSugestoesProduto = ref(false);
+const movimentoForm = ref({
+  produto_id: "",
+  tipo: "entrada",
+  quantidade: "",
+  observacoes: "",
+});
 
 defineOptions({ layout: AppLayout });
 
-const page = usePage();
 const empresaId = Number(page.props.empresa_selecionada || 0);
+const initialMainTab = String(page.props.active_tab || "produtos");
+const initialSubTab = String(page.props.active_sub_tab || "produtos_tabelas");
 
 const produtos = computed(() => (Array.isArray(page.props.produtos) ? page.props.produtos : []));
 const tabelasPrecos = computed(() => (Array.isArray(page.props.tabelas_precos) ? page.props.tabelas_precos : []));
+const movimentosEstoqueGeral = computed(() => (Array.isArray(page.props.movimentos_estoque_geral) ? page.props.movimentos_estoque_geral : []));
+const limiteHistoricoGeral = computed(() => Number(page.props.estoque_limites?.historico_geral || 300));
+const produtosEstoque = computed(() =>
+  [...produtos.value]
+    .map((produto) => ({
+      id: Number(produto.id),
+      nome: produto.nome,
+      codigo: produto.codigo,
+      saldo_estoque: Number(produto.saldo_estoque || 0),
+    }))
+    .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"))
+);
+const produtoSelecionadoMovimento = computed(() =>
+  produtosEstoque.value.find((produto) => produto.id === Number(movimentoForm.value.produto_id)) || null
+);
+const produtosSugeridosMovimento = computed(() => {
+  const termo = buscaProdutoMovimento.value.trim().toLowerCase();
+  if (!termo) return [];
+
+  return produtosEstoque.value
+    .filter((produto) => {
+      const nome = String(produto.nome || "").toLowerCase();
+      const codigo = String(produto.codigo || "").toLowerCase();
+      return nome.includes(termo) || codigo.includes(termo);
+    })
+    .slice(0, 20);
+});
+
+const colunasMovimento = [
+  { label: "Data", key: "data", sortable: false },
+  { label: "Produto", key: "produto", sortable: false },
+  { label: "Tipo", key: "tipo", sortable: false },
+  { label: "Qtde", key: "quantidade", sortable: false },
+  { label: "Saldo Antes", key: "saldo_anterior", sortable: false },
+  { label: "Saldo Depois", key: "saldo_atual", sortable: false },
+  { label: "Usuario", key: "usuario_nome", sortable: false },
+  { label: "Obs", key: "observacoes", sortable: false },
+];
+
+const movimentosProdutoSelecionado = computed(() => {
+  if (!movimentoForm.value.produto_id) return [];
+  const produtoId = Number(movimentoForm.value.produto_id);
+  return movimentosEstoqueGeral.value.filter((mov) => Number(mov.produto_id) === produtoId);
+});
 
 const mainTabs = [
-  { name: "Produtos", icon: "bx bx-box", url: "./produtos" },
-  { name: "Promoções", icon: "bx bx-badge", url: "./produtos/promocoes" },
-  { name: "Destaques", icon: "bx bx-star", url: "./produtos/destaques" },
-  { name: "Configurações", icon: "bx bx-cog", url: "./produtos/configuracoes" },
+  { id: "produtos", label: "Produtos", icon: "bx bx-box", url: `/${empresaId}/produtos/tabelas` },
+  { id: "promocoes", label: "Promoções", icon: "bx bx-badge", url: `/${empresaId}/produtos/promocoes` },
+  { id: "destaques", label: "Destaques", icon: "bx bx-star", url: `/${empresaId}/produtos/destaques` },
+  { id: "configuracoes", label: "Configurações", icon: "bx bx-cog", url: `/${empresaId}/produtos/configuracoes/categorias` },
 ];
-const activeMainTab = ref("Produtos");
+const activeMainTab = ref(initialMainTab);
 
 const produtosTabs = [
-  { name: "Produtos e Tabelas", icon: "bx bx-list-ul", url: "./produtos/tabelas" },
-  { name: "Gerenciar Estoque", icon: "bx bx-store", url: "./produtos/gerenciar_estoque" },
-  { name: "Importar Fotos", icon: "bx bx-image-add", url: "./produtos/importar_fotos" },
+  { id: "produtos_tabelas", label: "Produtos e Tabelas", icon: "bx bx-list-ul", url: `/${empresaId}/produtos/tabelas` },
+  { id: "gerenciar_estoque", label: "Gerenciar Estoque", icon: "bx bx-store", url: `/${empresaId}/produtos/gerenciar_estoque` },
+  { id: "importar_fotos", label: "Importar Fotos", icon: "bx bx-image-add", url: `/${empresaId}/produtos/importar_fotos` },
 ];
-const activeProdutosTab = ref("Produtos e Tabelas");
+const activeProdutosTab = ref(initialMainTab === "produtos" ? initialSubTab : "produtos_tabelas");
 
 const configTabs = [
-  { name: "Categorias", icon: "bx bx-category", url: "./produtos/configuracoes/categorias" },
-  { name: "Variações de Produto", icon: "bx bx-transfer", url: "./produtos/configuracoes/variacoes_produto" },
-  { name: "Período de Inatividade", icon: "bx bx-time", url: "./produtos/configuracoes/periodo_inatividade" },
-  { name: "Tributações", icon: "bx bx-receipt", url: "./produtos/configuracoes/tributacoes" },
+  { id: "categorias", label: "Categorias", icon: "bx bx-category", url: `/${empresaId}/produtos/configuracoes/categorias` },
+  { id: "variacoes", label: "Variações de Produto", icon: "bx bx-transfer", url: `/${empresaId}/produtos/configuracoes/variacoes` },
+  { id: "inatividade", label: "Período de Inatividade", icon: "bx bx-time", url: `/${empresaId}/produtos/configuracoes/inatividade` },
+  { id: "tributacoes", label: "Tributações", icon: "bx bx-receipt", url: `/${empresaId}/produtos/configuracoes/tributacoes` },
 ];
-const activeConfigTab = ref("Categorias");
+const activeConfigTab = ref(initialMainTab === "configuracoes" ? initialSubTab : "categorias");
 
 const columns = computed(() => [
   { label: "Fotos", key: "fotos" },
@@ -229,15 +422,125 @@ function triggerFileInput() {
 }
 
 function handleFiles(event) {
-  const files = event.target.files;
-  if (!files.length) return;
-  console.log("Arquivos selecionados:", files);
+  const files = Array.from(event.target.files || []);
+  event.target.value = "";
+  enviarFotos(files);
 }
 
 function handleDrop(event) {
   isDragging.value = false;
-  const files = event.dataTransfer.files;
-  if (!files.length) return;
-  console.log("Arquivos arrastados:", files);
+  const files = Array.from(event.dataTransfer.files || []);
+  enviarFotos(files);
+}
+
+function enviarFotos(files) {
+  if (!files.length || importandoFotos.value) return;
+
+  importFeedback.value = "";
+  importErro.value = "";
+
+  router.post(`/${empresaId}/produtos/importar-fotos`, {
+    files,
+  }, {
+    preserveScroll: true,
+    preserveState: true,
+    forceFormData: true,
+    onStart: () => {
+      importandoFotos.value = true;
+    },
+    onSuccess: () => {
+      importFeedback.value = "Importacao de fotos concluida.";
+    },
+    onError: (errors) => {
+      const mensagens = Object.values(errors || {}).flat().filter(Boolean);
+      importErro.value = mensagens[0] || "Nao foi possivel importar as fotos.";
+    },
+    onFinish: () => {
+      importandoFotos.value = false;
+    },
+  });
+}
+
+function salvarConfigEstoque() {
+  feedbackEstoque.value = "";
+  erroEstoque.value = "";
+
+  router.post(`/${empresaId}/produtos/configuracoes/gerenciar_estoque`, {
+    gerenciar_estoque: estoqueGerenciado.value,
+  }, {
+    preserveScroll: true,
+    preserveState: true,
+    onStart: () => {
+      salvandoEstoque.value = true;
+    },
+    onSuccess: () => {
+      feedbackEstoque.value = "Configuracao de estoque salva com sucesso.";
+    },
+    onError: (errors) => {
+      const mensagens = Object.values(errors || {}).flat().filter(Boolean);
+      erroEstoque.value = mensagens[0] || "Nao foi possivel salvar a configuracao.";
+    },
+    onFinish: () => {
+      salvandoEstoque.value = false;
+    },
+  });
+}
+
+function formatarSaldo(valor) {
+  const numero = Number(valor || 0);
+  return Number.isFinite(numero)
+    ? numero.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "0,00";
+}
+
+function formatarDataHora(valor) {
+  if (!valor) return "-";
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(valor));
+  } catch {
+    return String(valor);
+  }
+}
+
+function salvarMovimentoEstoque() {
+  feedbackMovimentoEstoque.value = "";
+  erroMovimentoEstoque.value = "";
+
+  router.post(`/${empresaId}/produtos/estoque/movimentos`, {
+    produto_id: movimentoForm.value.produto_id,
+    tipo: movimentoForm.value.tipo,
+    quantidade: movimentoForm.value.quantidade,
+    observacoes: movimentoForm.value.observacoes,
+  }, {
+    preserveScroll: true,
+    preserveState: true,
+    onStart: () => {
+      salvandoMovimentoEstoque.value = true;
+    },
+    onSuccess: () => {
+      feedbackMovimentoEstoque.value = "Movimentacao registrada com sucesso.";
+      movimentoForm.value.quantidade = "";
+      movimentoForm.value.observacoes = "";
+    },
+    onError: (errors) => {
+      const mensagens = Object.values(errors || {}).flat().filter(Boolean);
+      erroMovimentoEstoque.value = mensagens[0] || "Nao foi possivel registrar a movimentacao.";
+    },
+    onFinish: () => {
+      salvandoMovimentoEstoque.value = false;
+    },
+  });
+}
+
+function selecionarProdutoMovimento(produto) {
+  movimentoForm.value.produto_id = produto.id;
+  buscaProdutoMovimento.value = `${produto.codigo ? `${produto.codigo} - ` : ""}${produto.nome}`;
+  mostrarSugestoesProduto.value = false;
 }
 </script>
