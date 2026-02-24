@@ -15,7 +15,11 @@ class ProdutosConfiguracoesGerais extends Model
         'empresa_id',
         'inativos_recentes_dias',
         'inativos_antigos_dias',
+        'gerenciar_estoque',
         'ultima_alteracao',
     ];
-}
 
+    protected $casts = [
+        'gerenciar_estoque' => 'boolean',
+    ];
+}
