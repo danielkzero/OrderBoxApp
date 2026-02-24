@@ -22,12 +22,20 @@ const props = defineProps({
   collapsed: Boolean,
 });
 
-// Página atual
 const page = usePage();
 
-// Verifica se a rota atual é igual ao href do menu
 const isActive = computed(() => {
-  const url = page.url.split(/[/?]/).filter(Boolean);
-  return './' + url[1] === props.href
+  const currentPath = (page.url || "")
+    .split("?")[0]
+    .replace(/\/+$/, "");
+  const targetPath = (props.href || "")
+    .split("?")[0]
+    .replace(/\/+$/, "");
+
+  if (!currentPath || !targetPath) {
+    return false;
+  }
+
+  return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
 });
 </script>
