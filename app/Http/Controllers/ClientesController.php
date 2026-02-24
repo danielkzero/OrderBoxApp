@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Categorias;
 use App\Models\CidadesIbge;
 use App\Models\Clientes;
 use App\Models\ClientesCamposExtrasConfiguracoes;
@@ -19,6 +20,8 @@ use App\Models\ClientesTags;
 use App\Models\ClientesTelefones;
 use App\Models\Icms_st;
 use App\Models\MotivosBloqueios;
+use App\Models\CondicoesPagamentos;
+use App\Models\TabelasPrecos;
 use App\Models\Users;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -579,7 +582,7 @@ class ClientesController extends Controller
         ];
 
         $query = Clientes::query()
-            ->with(['ibge', 'tags', 'emails'])
+            ->with(['ibge', 'tags', 'emails', 'categorias_permissoes', 'condicoes_pagamentos_permissoes', 'tabelas_precos_permissoes'])
             ->where('empresa_id', $empresa)
             ->where('excluido', false);
 
@@ -647,9 +650,9 @@ class ClientesController extends Controller
                     'cidade' => $cliente->ibge?->municipio_nome,
                     'estado' => $cliente->ibge?->uf_codigo,
                     'tags' => $cliente->tags->pluck('nome')->values(),
-                    'tabelas_preco' => '--',
-                    'condicoes_pagamento' => '--',
-                    'categorias' => '--',
+                    'tabelas_preco' => $cliente->tabelas_precos_permissoes->pluck('nome')->filter()->values(),
+                    'condicoes_pagamento' => $cliente->condicoes_pagamentos_permissoes->pluck('nome')->filter()->values(),
+                    'categorias' => $cliente->categorias_permissoes->pluck('nome')->filter()->values(),
                 ];
             });
 
@@ -686,8 +689,85 @@ class ClientesController extends Controller
             'segmentos' => ClientesSegmentos::where('empresa_id', $empresa)->where('excluido', false)->where('ativo', true)->orderBy('ordem')->orderBy('nome')->get(['id', 'nome']),
             'redes' => ClientesRedes::where('empresa_id', $empresa)->where('excluido', false)->where('ativo', true)->orderBy('ordem')->orderBy('nome')->get(['id', 'nome']),
             'tags' => ClientesTags::where('empresa_id', $empresa)->where('excluido', false)->where('ativo', true)->orderBy('ordem')->orderBy('nome')->get(['id', 'nome']),
+            'categorias' => Categorias::where('empresa_id', $empresa)->where('excluido', false)->orderBy('nome')->get(['id', 'nome']),
+            'condicoes_pagamentos' => CondicoesPagamentos::where('empresa_id', $empresa)->where('excluido', false)->orderBy('nome')->get(['id', 'nome']),
+            'tabelas_precos' => TabelasPrecos::where('empresa_id', $empresa)->where('excluido', false)->orderBy('nome')->get(['id', 'nome']),
             'representadas' => $representadas,
         ]);
+    }
+
+    public function atualizarVinculosPermissoes(Request $request, $empresa): RedirectResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $validated = $request->validate([
+            'cliente_ids' => ['required', 'array', 'min:1'],
+            'cliente_ids.*' => [Rule::exists('clientes', 'id')->where('empresa_id', $empresa)->where('excluido', false)],
+            'tipo_vinculo' => ['required', Rule::in(['categorias', 'condicoes_pagamento', 'tabelas_preco', 'tags'])],
+            'acao' => ['required', Rule::in(['adicionar', 'substituir', 'remover'])],
+            'item_ids' => ['nullable', 'array'],
+            'item_ids.*' => ['integer'],
+        ]);
+
+        $tipoVinculo = $validated['tipo_vinculo'];
+        $itemIds = collect($validated['item_ids'] ?? [])->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+        if ($tipoVinculo === 'categorias') {
+            validator(['item_ids' => $itemIds], [
+                'item_ids.*' => [Rule::exists('categorias', 'id')->where('empresa_id', $empresa)->where('excluido', false)],
+            ])->validate();
+        } elseif ($tipoVinculo === 'condicoes_pagamento') {
+            validator(['item_ids' => $itemIds], [
+                'item_ids.*' => [Rule::exists('condicoes_pagamentos', 'id')->where('empresa_id', $empresa)->where('excluido', false)],
+            ])->validate();
+        } elseif ($tipoVinculo === 'tabelas_preco') {
+            validator(['item_ids' => $itemIds], [
+                'item_ids.*' => [Rule::exists('tabelas_precos', 'id')->where('empresa_id', $empresa)->where('excluido', false)],
+            ])->validate();
+        } else {
+            validator(['item_ids' => $itemIds], [
+                'item_ids.*' => [Rule::exists('clientes_tags', 'id')->where('empresa_id', $empresa)->where('excluido', false)],
+            ])->validate();
+        }
+
+        $clientes = Clientes::query()
+            ->where('empresa_id', $empresa)
+            ->whereIn('id', $validated['cliente_ids'])
+            ->get();
+
+        DB::transaction(function () use ($clientes, $tipoVinculo, $validated, $itemIds) {
+            foreach ($clientes as $cliente) {
+                $usaPivotComEmpresa = in_array($tipoVinculo, ['categorias', 'condicoes_pagamento', 'tabelas_preco'], true);
+                $payloadComEmpresa = collect($itemIds)
+                    ->mapWithKeys(fn ($id) => [(int) $id => ['empresa_id' => (int) $cliente->empresa_id]])
+                    ->all();
+
+                $relation = match ($tipoVinculo) {
+                    'categorias' => $cliente->categorias_permissoes(),
+                    'condicoes_pagamento' => $cliente->condicoes_pagamentos_permissoes(),
+                    'tabelas_preco' => $cliente->tabelas_precos_permissoes(),
+                    default => $cliente->tags(),
+                };
+
+                if ($validated['acao'] === 'substituir') {
+                    $relation->sync($usaPivotComEmpresa ? $payloadComEmpresa : $itemIds);
+                    continue;
+                }
+
+                if ($validated['acao'] === 'adicionar') {
+                    $relation->syncWithoutDetaching($usaPivotComEmpresa ? $payloadComEmpresa : $itemIds);
+                    continue;
+                }
+
+                if (!empty($itemIds)) {
+                    $relation->detach($itemIds);
+                } else {
+                    $relation->detach();
+                }
+            }
+        });
+
+        return back()->with('success', 'Vinculos e permissoes atualizados com sucesso.');
     }
 
     public function create($empresa): Response
