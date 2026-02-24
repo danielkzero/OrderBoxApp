@@ -21,10 +21,12 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use ZipArchive;
 
 class ProdutosController extends Controller
 {
@@ -559,6 +561,401 @@ class ProdutosController extends Controller
             ->with('success', 'Produto excluido com sucesso.');
     }
 
+    public function createImportacao($empresa): Response
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        return Inertia::render('Produtos/Importacao/Index', [
+            'empresa_id' => (int) $empresa,
+        ]);
+    }
+
+    private function colToNumber(string $col): int
+    {
+        $number = 0;
+        foreach (str_split(strtoupper($col)) as $char) {
+            if ($char < 'A' || $char > 'Z') {
+                continue;
+            }
+            $number = ($number * 26) + (ord($char) - 64);
+        }
+
+        return $number;
+    }
+
+    private function normalizarTextoCell(?string $valor): string
+    {
+        if ($valor === null) {
+            return '';
+        }
+
+        $valor = preg_replace('/\s+/u', ' ', str_replace(["\r", "\n", "\t"], ' ', $valor)) ?? '';
+        return trim($valor);
+    }
+
+    private function parseXlsxRows(string $arquivoPath): array
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($arquivoPath) !== true) {
+            throw ValidationException::withMessages([
+                'arquivo' => 'Nao foi possivel abrir a planilha.',
+            ]);
+        }
+
+        try {
+            $workbookXml = $zip->getFromName('xl/workbook.xml');
+            $workbookRelsXml = $zip->getFromName('xl/_rels/workbook.xml.rels');
+
+            if ($workbookXml === false || $workbookRelsXml === false) {
+                throw ValidationException::withMessages([
+                    'arquivo' => 'Planilha invalida: estrutura do workbook nao encontrada.',
+                ]);
+            }
+
+            $workbook = new \SimpleXMLElement($workbookXml);
+            $sheets = $workbook->xpath('//*[local-name()="sheets"]/*[local-name()="sheet"]');
+
+            if (!$sheets || !isset($sheets[0])) {
+                throw ValidationException::withMessages([
+                    'arquivo' => 'Planilha invalida: nenhuma aba encontrada.',
+                ]);
+            }
+
+            $firstSheet = $sheets[0];
+            $rid = (string) $firstSheet->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'];
+
+            $rels = new \SimpleXMLElement($workbookRelsXml);
+            $targets = $rels->xpath('//*[local-name()="Relationship"][@Id="' . $rid . '"]');
+
+            if (!$targets || !isset($targets[0])) {
+                throw ValidationException::withMessages([
+                    'arquivo' => 'Planilha invalida: relacao da aba nao encontrada.',
+                ]);
+            }
+
+            $sheetTarget = ltrim((string) $targets[0]['Target'], '/');
+            if (!Str::startsWith($sheetTarget, 'xl/')) {
+                $sheetTarget = 'xl/' . $sheetTarget;
+            }
+
+            $sheetXml = $zip->getFromName($sheetTarget);
+            if ($sheetXml === false) {
+                throw ValidationException::withMessages([
+                    'arquivo' => 'Planilha invalida: dados da aba nao encontrados.',
+                ]);
+            }
+
+            $sharedStrings = [];
+            $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
+            if ($sharedStringsXml !== false) {
+                $sst = new \SimpleXMLElement($sharedStringsXml);
+                $stringItems = $sst->xpath('//*[local-name()="si"]');
+                foreach ($stringItems ?: [] as $item) {
+                    $texts = $item->xpath('.//*[local-name()="t"]');
+                    $sharedStrings[] = $this->normalizarTextoCell(implode('', array_map(fn($textNode) => (string) $textNode, $texts ?: [])));
+                }
+            }
+
+            $sheet = new \SimpleXMLElement($sheetXml);
+            $rows = $sheet->xpath('//*[local-name()="sheetData"]/*[local-name()="row"]') ?: [];
+
+            $parsed = [];
+            foreach ($rows as $rowNode) {
+                $rowIndex = (int) ($rowNode['r'] ?? 0);
+                $cells = $rowNode->xpath('./*[local-name()="c"]') ?: [];
+                $rowValues = [];
+
+                foreach ($cells as $cellNode) {
+                    $cellRef = (string) ($cellNode['r'] ?? '');
+                    if (!preg_match('/([A-Z]+)/', $cellRef, $match)) {
+                        continue;
+                    }
+
+                    $colIndex = $this->colToNumber($match[1]);
+                    $cellType = (string) ($cellNode['t'] ?? '');
+                    $value = '';
+
+                    if ($cellType === 's') {
+                        $idxNodes = $cellNode->xpath('./*[local-name()="v"]');
+                        $idx = isset($idxNodes[0]) ? (int) ((string) $idxNodes[0]) : null;
+                        $value = $idx !== null && isset($sharedStrings[$idx]) ? $sharedStrings[$idx] : '';
+                    } elseif ($cellType === 'inlineStr') {
+                        $texts = $cellNode->xpath('.//*[local-name()="is"]//*[local-name()="t"]');
+                        $value = implode('', array_map(fn($textNode) => (string) $textNode, $texts ?: []));
+                    } else {
+                        $valNodes = $cellNode->xpath('./*[local-name()="v"]');
+                        $value = isset($valNodes[0]) ? (string) $valNodes[0] : '';
+                    }
+
+                    $rowValues[$colIndex] = $this->normalizarTextoCell($value);
+                }
+
+                $parsed[] = [
+                    'row' => $rowIndex,
+                    'values' => $rowValues,
+                ];
+            }
+
+            return $parsed;
+        } finally {
+            $zip->close();
+        }
+    }
+
+    private function parseNumeroPlanilha(mixed $valor): ?float
+    {
+        if ($valor === null) {
+            return null;
+        }
+
+        $texto = trim((string) $valor);
+        if ($texto === '') {
+            return null;
+        }
+
+        $texto = str_replace(['R$', '%', ' '], '', $texto);
+
+        if (str_contains($texto, ',') && str_contains($texto, '.')) {
+            if (strrpos($texto, ',') > strrpos($texto, '.')) {
+                $texto = str_replace('.', '', $texto);
+                $texto = str_replace(',', '.', $texto);
+            } else {
+                $texto = str_replace(',', '', $texto);
+            }
+        } elseif (str_contains($texto, ',')) {
+            $texto = str_replace(',', '.', $texto);
+        }
+
+        return is_numeric($texto) ? (float) $texto : null;
+    }
+
+    private function parseInteiroPlanilha(mixed $valor): ?int
+    {
+        $numero = $this->parseNumeroPlanilha($valor);
+        return $numero === null ? null : (int) round($numero);
+    }
+
+    private function obterOuCriarCategoriaImportacao(int|string $empresa, string $nome, ?int $categoriaPaiId, array &$cache): ?Categorias
+    {
+        $nome = trim($nome);
+        if ($nome === '') {
+            return null;
+        }
+
+        $cacheKey = mb_strtolower($nome) . '|' . ($categoriaPaiId ?? 0);
+        if (array_key_exists($cacheKey, $cache)) {
+            return $cache[$cacheKey];
+        }
+
+        $categoria = Categorias::query()
+            ->where('empresa_id', (int) $empresa)
+            ->where('excluido', false)
+            ->whereRaw('LOWER(nome) = ?', [mb_strtolower($nome)])
+            ->where('categoria_pai_id', $categoriaPaiId)
+            ->first();
+
+        if (!$categoria) {
+            $categoria = Categorias::create([
+                'empresa_id' => (int) $empresa,
+                'nome' => $nome,
+                'categoria_pai_id' => $categoriaPaiId,
+                'ultima_alteracao' => now(),
+                'excluido' => false,
+            ]);
+        }
+
+        $cache[$cacheKey] = $categoria;
+        return $categoria;
+    }
+
+    public function importarProdutosPlanilha(Request $request, $empresa): RedirectResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $validated = $request->validate([
+            'modo' => ['required', Rule::in(['atualizar', 'substituir'])],
+            'arquivo' => ['required', 'file', 'mimes:xlsx', 'max:10240'],
+        ]);
+
+        $rows = $this->parseXlsxRows($request->file('arquivo')->getRealPath());
+        if (empty($rows)) {
+            return back()->withErrors(['arquivo' => 'A planilha esta vazia.'])->withInput();
+        }
+
+        $dadosRows = array_values(array_filter($rows, function (array $row) {
+            return (int) ($row['row'] ?? 0) > 1;
+        }));
+
+        if (empty($dadosRows)) {
+            return back()->withErrors(['arquivo' => 'A planilha nao possui linhas de produtos para importar.'])->withInput();
+        }
+
+        $tabelasPrecos = TabelasPrecos::query()
+            ->where('empresa_id', (int) $empresa)
+            ->where('excluido', false)
+            ->orderBy('id')
+            ->get(['id'])
+            ->values();
+
+        $criados = 0;
+        $atualizados = 0;
+        $ignorados = 0;
+        $erros = [];
+        $categoriaCache = [];
+
+        DB::transaction(function () use (
+            $empresa,
+            $validated,
+            $dadosRows,
+            $tabelasPrecos,
+            &$criados,
+            &$atualizados,
+            &$ignorados,
+            &$erros,
+            &$categoriaCache
+        ) {
+            if ($validated['modo'] === 'substituir') {
+                Produtos::query()
+                    ->where('empresa_id', (int) $empresa)
+                    ->where('excluido', false)
+                    ->update([
+                        'excluido' => true,
+                        'ativo' => false,
+                        'ultima_alteracao' => now(),
+                    ]);
+            }
+
+            foreach ($dadosRows as $rowData) {
+                $rowNum = (int) ($rowData['row'] ?? 0);
+                $values = $rowData['values'] ?? [];
+
+                $codigo = trim((string) ($values[1] ?? ''));
+                $nome = trim((string) ($values[2] ?? ''));
+                $precoTabela = $this->parseNumeroPlanilha($values[3] ?? null);
+                $precoMinimo = $this->parseNumeroPlanilha($values[4] ?? null);
+                $ipi = $this->parseNumeroPlanilha($values[5] ?? null);
+                $codigoNcm = trim((string) ($values[6] ?? ''));
+                $comissao = $this->parseNumeroPlanilha($values[7] ?? null);
+                $observacoes = trim((string) ($values[8] ?? ''));
+                $unidade = trim((string) ($values[9] ?? ''));
+                $saldoEstoque = $this->parseNumeroPlanilha($values[10] ?? null);
+                $multiplo = $this->parseInteiroPlanilha($values[11] ?? null);
+                $pesoBruto = $this->parseNumeroPlanilha($values[12] ?? null);
+                $tipoPesoDimensoes = $this->parseInteiroPlanilha($values[13] ?? null);
+                $largura = $this->parseNumeroPlanilha($values[14] ?? null);
+                $altura = $this->parseNumeroPlanilha($values[15] ?? null);
+                $comprimento = $this->parseNumeroPlanilha($values[16] ?? null);
+                $cat1 = trim((string) ($values[17] ?? ''));
+                $cat2 = trim((string) ($values[18] ?? ''));
+                $cat3 = trim((string) ($values[19] ?? ''));
+                $flagInativo = $this->parseInteiroPlanilha($values[20] ?? null);
+                $flagNaoExibir = $this->parseInteiroPlanilha($values[21] ?? null);
+
+                $temConteudo = collect($values)->filter(fn($value) => trim((string) $value) !== '')->isNotEmpty();
+                if (!$temConteudo) {
+                    continue;
+                }
+
+                if ($nome === '' || $precoTabela === null) {
+                    $ignorados++;
+                    $erros[] = "Linha {$rowNum}: nome e preco de tabela sao obrigatorios.";
+                    continue;
+                }
+
+                $produto = null;
+                if ($codigo !== '') {
+                    $produto = Produtos::query()
+                        ->where('empresa_id', (int) $empresa)
+                        ->where('codigo', $codigo)
+                        ->first();
+                }
+
+                if (!$produto) {
+                    $produto = Produtos::query()
+                        ->where('empresa_id', (int) $empresa)
+                        ->where('excluido', false)
+                        ->whereRaw('LOWER(nome) = ?', [mb_strtolower($nome)])
+                        ->first();
+                }
+
+                $categoriaNivel1 = $this->obterOuCriarCategoriaImportacao($empresa, $cat1, null, $categoriaCache);
+                $categoriaNivel2 = $this->obterOuCriarCategoriaImportacao($empresa, $cat2, $categoriaNivel1?->id, $categoriaCache);
+                $categoriaNivel3 = $this->obterOuCriarCategoriaImportacao($empresa, $cat3, $categoriaNivel2?->id, $categoriaCache);
+                $categoriaFinal = $categoriaNivel3 ?? $categoriaNivel2 ?? $categoriaNivel1;
+
+                $ativo = $produto?->ativo ?? true;
+                if ($flagInativo !== null) {
+                    $ativo = $flagInativo === 0;
+                }
+
+                $exibirNoB2b = $produto?->exibir_no_b2b ?? true;
+                if ($flagNaoExibir !== null) {
+                    $exibirNoB2b = $flagNaoExibir === 0;
+                }
+
+                $payload = [
+                    'categoria_id' => $categoriaFinal?->id,
+                    'codigo' => $codigo !== '' ? $codigo : ($produto?->codigo ?: ('IMP-' . now()->format('YmdHis') . '-' . $rowNum)),
+                    'nome' => $nome,
+                    'preco_tabela' => $precoTabela,
+                    'preco_minimo' => $precoMinimo,
+                    'ipi' => $ipi,
+                    'tipo_ipi' => '%',
+                    'comissao' => $comissao,
+                    'codigo_ncm' => $codigoNcm !== '' ? $codigoNcm : null,
+                    'observacoes' => $observacoes !== '' ? $observacoes : null,
+                    'unidade' => $unidade !== '' ? $unidade : null,
+                    'saldo_estoque' => $saldoEstoque !== null ? max(0, $saldoEstoque) : ($produto?->saldo_estoque ?? 0),
+                    'multiplo' => $multiplo !== null && $multiplo > 0 ? $multiplo : ($produto?->multiplo ?: 1),
+                    'peso_bruto' => $pesoBruto,
+                    'largura' => $largura,
+                    'altura' => $altura,
+                    'comprimento' => $comprimento,
+                    'peso_dimensoes_unitario' => $tipoPesoDimensoes === 1 ? false : true,
+                    'ativo' => $ativo,
+                    'exibir_no_b2b' => $exibirNoB2b,
+                    'moeda' => $produto?->moeda ?: 'R$',
+                    'excluido' => false,
+                    'ultima_alteracao' => now(),
+                ];
+
+                if ($produto) {
+                    $produto->update($payload);
+                    $atualizados++;
+                } else {
+                    $produto = Produtos::create([
+                        'empresa_id' => (int) $empresa,
+                        ...$payload,
+                    ]);
+                    $criados++;
+                }
+
+                $precosTabelas = [];
+                foreach ($tabelasPrecos as $index => $tabela) {
+                    $excelCol = 22 + $index;
+                    if ($excelCol > 40) {
+                        break;
+                    }
+                    $valorTabela = $this->parseNumeroPlanilha($values[$excelCol] ?? null);
+                    if ($valorTabela !== null) {
+                        $precosTabelas[(int) $tabela->id] = $valorTabela;
+                    }
+                }
+                $this->syncPrecosTabela($empresa, (int) $produto->id, $precosTabelas);
+            }
+        });
+
+        $mensagem = "Importacao finalizada: {$criados} criado(s), {$atualizados} atualizado(s), {$ignorados} ignorado(s).";
+
+        if (!empty($erros)) {
+            return back()
+                ->with('warning', $mensagem)
+                ->with('import_errors', array_slice($erros, 0, 20));
+        }
+
+        return back()->with('success', $mensagem);
+    }
+
     public function importarFotos(Request $request, $empresa)
     {
         $this->validarAcessoEmpresa($empresa);
@@ -1048,26 +1445,207 @@ class ProdutosController extends Controller
             'data_inicio' => ['nullable', 'date'],
             'data_fim' => ['nullable', 'date', 'after_or_equal:data_inicio'],
             'produto_ids' => ['nullable', 'array'],
-            'produto_ids.*' => ['integer', 'exists:produtos,id'],
+            'produto_ids.*' => [
+                'integer',
+                Rule::exists('produtos', 'id')->where(fn($q) => $q
+                    ->where('empresa_id', (int) $empresa)
+                    ->where('excluido', false)),
+            ],
+            'itens' => ['nullable', 'array'],
+            'itens.*.produto_id' => [
+                'required_with:itens',
+                'integer',
+                Rule::exists('produtos', 'id')->where(fn($q) => $q
+                    ->where('empresa_id', (int) $empresa)
+                    ->where('excluido', false)),
+            ],
+            'itens.*.desconto_percentual' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
-        $promocao = ProdutosPromocoes::create([
-            'empresa_id' => (int) $empresa,
-            'nome' => $validated['nome'],
-            'data_inicio' => $validated['data_inicio'] ?? null,
-            'data_fim' => $validated['data_fim'] ?? null,
-            'ultima_alteracao' => now(),
-        ]);
-
-        foreach (($validated['produto_ids'] ?? []) as $produtoId) {
-            ProdutosPromocoesItens::firstOrCreate([
+        DB::transaction(function () use ($empresa, $validated) {
+            $promocao = ProdutosPromocoes::create([
                 'empresa_id' => (int) $empresa,
-                'promocao_id' => $promocao->id,
-                'produto_id' => $produtoId,
-            ], ['excluido' => false]);
+                'nome' => $validated['nome'],
+                'data_inicio' => $validated['data_inicio'] ?? null,
+                'data_fim' => $validated['data_fim'] ?? null,
+                'ultima_alteracao' => now(),
+            ]);
+
+            $itens = collect($validated['itens'] ?? [])
+                ->map(fn($item) => [
+                    'produto_id' => (int) $item['produto_id'],
+                    'desconto_percentual' => array_key_exists('desconto_percentual', $item) && $item['desconto_percentual'] !== null
+                        ? (float) $item['desconto_percentual']
+                        : null,
+                ])
+                ->values();
+
+            if ($itens->isEmpty()) {
+                $itens = collect($validated['produto_ids'] ?? [])
+                    ->map(fn($produtoId) => [
+                        'produto_id' => (int) $produtoId,
+                        'desconto_percentual' => null,
+                    ])
+                    ->values();
+            }
+
+            foreach ($itens as $item) {
+                ProdutosPromocoesItens::updateOrCreate(
+                    [
+                        'empresa_id' => (int) $empresa,
+                        'promocao_id' => (int) $promocao->id,
+                        'produto_id' => (int) $item['produto_id'],
+                    ],
+                    [
+                        'desconto_percentual' => $item['desconto_percentual'],
+                        'excluido' => false,
+                    ]
+                );
+            }
+        });
+
+        return redirect("/{$empresa}/produtos/promocoes")->with('success', 'Promocao criada com sucesso.');
+    }
+
+    private function carregarDadosFormularioPromocao(int|string $empresa, ?ProdutosPromocoes $promocao = null): array
+    {
+        $produtos = Produtos::query()
+            ->where('empresa_id', (int) $empresa)
+            ->where('excluido', false)
+            ->orderBy('nome')
+            ->get(['id', 'codigo', 'nome'])
+            ->map(fn($produto) => [
+                'id' => $produto->id,
+                'codigo' => $produto->codigo,
+                'nome' => $produto->nome,
+            ])
+            ->values();
+
+        $itensSelecionados = collect();
+        if ($promocao) {
+            $itensSelecionados = ProdutosPromocoesItens::query()
+                ->with('produto:id,codigo,nome')
+                ->where('empresa_id', (int) $empresa)
+                ->where('promocao_id', (int) $promocao->id)
+                ->where('excluido', false)
+                ->orderBy('id')
+                ->get()
+                ->map(fn($item) => [
+                    'produto_id' => (int) $item->produto_id,
+                    'codigo' => $item->produto?->codigo,
+                    'nome' => $item->produto?->nome,
+                    'desconto_percentual' => $item->desconto_percentual !== null ? (float) $item->desconto_percentual : null,
+                ])
+                ->values();
         }
 
-        return back()->with('success', 'Promocao criada com sucesso.');
+        return [
+            'empresa_id' => (int) $empresa,
+            'promocao' => $promocao ? [
+                'id' => (int) $promocao->id,
+                'nome' => $promocao->nome,
+                'data_inicio' => optional($promocao->data_inicio)->format('Y-m-d'),
+                'data_fim' => optional($promocao->data_fim)->format('Y-m-d'),
+                'ativo' => (bool) $promocao->ativo,
+                'itens' => $itensSelecionados,
+            ] : null,
+            'produtos' => $produtos,
+        ];
+    }
+
+    public function createPromocao($empresa): Response
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        return Inertia::render('Produtos/Promocoes/Form', [
+            ...$this->carregarDadosFormularioPromocao($empresa),
+            'is_edit' => false,
+        ]);
+    }
+
+    public function editPromocao($empresa, $promocao): Response
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $promocaoModel = ProdutosPromocoes::query()
+            ->where('empresa_id', (int) $empresa)
+            ->where('excluido', false)
+            ->findOrFail($promocao);
+
+        return Inertia::render('Produtos/Promocoes/Form', [
+            ...$this->carregarDadosFormularioPromocao($empresa, $promocaoModel),
+            'is_edit' => true,
+        ]);
+    }
+
+    public function updatePromocao(Request $request, $empresa, $promocao): RedirectResponse
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $validated = $request->validate([
+            'nome' => ['required', 'string', 'max:150'],
+            'data_inicio' => ['nullable', 'date'],
+            'data_fim' => ['nullable', 'date', 'after_or_equal:data_inicio'],
+            'itens' => ['nullable', 'array'],
+            'itens.*.produto_id' => [
+                'required_with:itens',
+                'integer',
+                Rule::exists('produtos', 'id')->where(fn($q) => $q
+                    ->where('empresa_id', (int) $empresa)
+                    ->where('excluido', false)),
+            ],
+            'itens.*.desconto_percentual' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'ativo' => ['nullable', 'boolean'],
+        ]);
+
+        $promocaoModel = ProdutosPromocoes::query()
+            ->where('empresa_id', (int) $empresa)
+            ->where('excluido', false)
+            ->findOrFail($promocao);
+
+        DB::transaction(function () use ($validated, $empresa, $promocaoModel) {
+            $promocaoModel->update([
+                'nome' => $validated['nome'],
+                'data_inicio' => $validated['data_inicio'] ?? null,
+                'data_fim' => $validated['data_fim'] ?? null,
+                'ativo' => (bool) ($validated['ativo'] ?? true),
+                'ultima_alteracao' => now(),
+            ]);
+
+            $itens = collect($validated['itens'] ?? [])
+                ->map(fn($item) => [
+                    'produto_id' => (int) $item['produto_id'],
+                    'desconto_percentual' => array_key_exists('desconto_percentual', $item) && $item['desconto_percentual'] !== null
+                        ? (float) $item['desconto_percentual']
+                        : null,
+                ])
+                ->unique('produto_id')
+                ->values();
+
+            $produtoIdsAtivos = $itens->pluck('produto_id')->all();
+
+            ProdutosPromocoesItens::query()
+                ->where('empresa_id', (int) $empresa)
+                ->where('promocao_id', (int) $promocaoModel->id)
+                ->when(!empty($produtoIdsAtivos), fn($q) => $q->whereNotIn('produto_id', $produtoIdsAtivos))
+                ->update(['excluido' => true]);
+
+            foreach ($itens as $item) {
+                ProdutosPromocoesItens::updateOrCreate(
+                    [
+                        'empresa_id' => (int) $empresa,
+                        'promocao_id' => (int) $promocaoModel->id,
+                        'produto_id' => (int) $item['produto_id'],
+                    ],
+                    [
+                        'desconto_percentual' => $item['desconto_percentual'],
+                        'excluido' => false,
+                    ]
+                );
+            }
+        });
+
+        return redirect("/{$empresa}/produtos/promocoes")->with('success', 'Promocao atualizada com sucesso.');
     }
 
     public function destroyPromocao($empresa, $promocao)
@@ -1093,26 +1671,122 @@ class ProdutosController extends Controller
             'data_inicio' => ['nullable', 'date'],
             'data_fim' => ['nullable', 'date', 'after_or_equal:data_inicio'],
             'produto_ids' => ['nullable', 'array'],
-            'produto_ids.*' => ['integer', 'exists:produtos,id'],
+            'produto_ids.*' => [
+                'integer',
+                Rule::exists('produtos', 'id')->where(fn($q) => $q
+                    ->where('empresa_id', (int) $empresa)
+                    ->where('excluido', false)),
+            ],
+            'itens' => ['nullable', 'array'],
+            'itens.*.produto_id' => [
+                'required_with:itens',
+                'integer',
+                Rule::exists('produtos', 'id')->where(fn($q) => $q
+                    ->where('empresa_id', (int) $empresa)
+                    ->where('excluido', false)),
+            ],
         ]);
 
-        $destaque = ProdutosDestaques::create([
-            'empresa_id' => (int) $empresa,
-            'nome' => $validated['nome'],
-            'data_inicio' => $validated['data_inicio'] ?? null,
-            'data_fim' => $validated['data_fim'] ?? null,
-            'ultima_alteracao' => now(),
-        ]);
-
-        foreach (($validated['produto_ids'] ?? []) as $produtoId) {
-            ProdutosDestaquesItens::firstOrCreate([
+        DB::transaction(function () use ($empresa, $validated) {
+            $destaque = ProdutosDestaques::create([
                 'empresa_id' => (int) $empresa,
-                'destaque_id' => $destaque->id,
-                'produto_id' => $produtoId,
-            ], ['excluido' => false]);
+                'nome' => $validated['nome'],
+                'data_inicio' => $validated['data_inicio'] ?? null,
+                'data_fim' => $validated['data_fim'] ?? null,
+                'ultima_alteracao' => now(),
+            ]);
+
+            $itens = collect($validated['itens'] ?? [])
+                ->map(fn($item) => (int) $item['produto_id'])
+                ->values();
+
+            if ($itens->isEmpty()) {
+                $itens = collect($validated['produto_ids'] ?? [])->map(fn($id) => (int) $id)->values();
+            }
+
+            foreach ($itens as $produtoId) {
+                ProdutosDestaquesItens::updateOrCreate(
+                    [
+                        'empresa_id' => (int) $empresa,
+                        'destaque_id' => (int) $destaque->id,
+                        'produto_id' => (int) $produtoId,
+                    ],
+                    ['excluido' => false]
+                );
+            }
+        });
+
+        return redirect("/{$empresa}/produtos/destaques")->with('success', 'Destaque criado com sucesso.');
+    }
+
+    private function carregarDadosFormularioDestaque(int|string $empresa, ?ProdutosDestaques $destaque = null): array
+    {
+        $produtos = Produtos::query()
+            ->where('empresa_id', (int) $empresa)
+            ->where('excluido', false)
+            ->orderBy('nome')
+            ->get(['id', 'codigo', 'nome'])
+            ->map(fn($produto) => [
+                'id' => (int) $produto->id,
+                'codigo' => $produto->codigo,
+                'nome' => $produto->nome,
+            ])
+            ->values();
+
+        $itensSelecionados = collect();
+        if ($destaque) {
+            $itensSelecionados = ProdutosDestaquesItens::query()
+                ->with('produto:id,codigo,nome')
+                ->where('empresa_id', (int) $empresa)
+                ->where('destaque_id', (int) $destaque->id)
+                ->where('excluido', false)
+                ->orderBy('id')
+                ->get()
+                ->map(fn($item) => [
+                    'produto_id' => (int) $item->produto_id,
+                    'codigo' => $item->produto?->codigo,
+                    'nome' => $item->produto?->nome,
+                ])
+                ->values();
         }
 
-        return back()->with('success', 'Destaque criado com sucesso.');
+        return [
+            'empresa_id' => (int) $empresa,
+            'destaque' => $destaque ? [
+                'id' => (int) $destaque->id,
+                'nome' => $destaque->nome,
+                'data_inicio' => optional($destaque->data_inicio)->format('Y-m-d'),
+                'data_fim' => optional($destaque->data_fim)->format('Y-m-d'),
+                'ativo' => (bool) $destaque->ativo,
+                'itens' => $itensSelecionados,
+            ] : null,
+            'produtos' => $produtos,
+        ];
+    }
+
+    public function createDestaque($empresa): Response
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        return Inertia::render('Produtos/Destaques/Form', [
+            ...$this->carregarDadosFormularioDestaque($empresa),
+            'is_edit' => false,
+        ]);
+    }
+
+    public function editDestaque($empresa, $destaque): Response
+    {
+        $this->validarAcessoEmpresa($empresa);
+
+        $destaqueModel = ProdutosDestaques::query()
+            ->where('empresa_id', (int) $empresa)
+            ->where('excluido', false)
+            ->findOrFail($destaque);
+
+        return Inertia::render('Produtos/Destaques/Form', [
+            ...$this->carregarDadosFormularioDestaque($empresa, $destaqueModel),
+            'is_edit' => true,
+        ]);
     }
 
     public function updateDestaque(Request $request, $empresa, $destaque)
@@ -1123,6 +1797,15 @@ class ProdutosController extends Controller
             'nome' => ['required', 'string', 'max:150'],
             'data_inicio' => ['nullable', 'date'],
             'data_fim' => ['nullable', 'date', 'after_or_equal:data_inicio'],
+            'itens' => ['nullable', 'array'],
+            'itens.*.produto_id' => [
+                'required_with:itens',
+                'integer',
+                Rule::exists('produtos', 'id')->where(fn($q) => $q
+                    ->where('empresa_id', (int) $empresa)
+                    ->where('excluido', false)),
+            ],
+            'ativo' => ['nullable', 'boolean'],
         ]);
 
         $model = ProdutosDestaques::query()
@@ -1130,14 +1813,44 @@ class ProdutosController extends Controller
             ->where('excluido', false)
             ->findOrFail($destaque);
 
-        $model->update([
-            'nome' => $validated['nome'],
-            'data_inicio' => $validated['data_inicio'] ?? null,
-            'data_fim' => $validated['data_fim'] ?? null,
-            'ultima_alteracao' => now(),
-        ]);
+        DB::transaction(function () use ($validated, $empresa, $model) {
+            $model->update([
+                'nome' => $validated['nome'],
+                'data_inicio' => $validated['data_inicio'] ?? null,
+                'data_fim' => $validated['data_fim'] ?? null,
+                'ativo' => (bool) ($validated['ativo'] ?? true),
+                'ultima_alteracao' => now(),
+            ]);
 
-        return back()->with('success', 'Destaque atualizado com sucesso.');
+            if (!array_key_exists('itens', $validated)) {
+                return;
+            }
+
+            $produtoIdsAtivos = collect($validated['itens'] ?? [])
+                ->map(fn($item) => (int) $item['produto_id'])
+                ->unique()
+                ->values()
+                ->all();
+
+            ProdutosDestaquesItens::query()
+                ->where('empresa_id', (int) $empresa)
+                ->where('destaque_id', (int) $model->id)
+                ->when(!empty($produtoIdsAtivos), fn($q) => $q->whereNotIn('produto_id', $produtoIdsAtivos))
+                ->update(['excluido' => true]);
+
+            foreach ($produtoIdsAtivos as $produtoId) {
+                ProdutosDestaquesItens::updateOrCreate(
+                    [
+                        'empresa_id' => (int) $empresa,
+                        'destaque_id' => (int) $model->id,
+                        'produto_id' => (int) $produtoId,
+                    ],
+                    ['excluido' => false]
+                );
+            }
+        });
+
+        return redirect("/{$empresa}/produtos/destaques")->with('success', 'Destaque atualizado com sucesso.');
     }
 
     public function destroyDestaque($empresa, $destaque)
