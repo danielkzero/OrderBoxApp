@@ -24,7 +24,11 @@
         </div>
 
         <div v-for="cliente in filteredClientes" :key="cliente.id" class="border-b border-gray-200 pb-4 pt-3">
-          <div class="font-semibold text-indigo-600">{{ cliente.nome_fantasia || cliente.razao_social }}</div>
+          <div class="font-semibold text-indigo-600">
+            <Link :href="`/${empresaId}/clientes/${cliente.id}/show`">
+              {{ cliente.nome_fantasia || cliente.razao_social }}
+            </Link>            
+          </div>
           <div class="text-sm text-gray-600">{{ cliente.razao_social }} - {{ cliente.cnpj }}</div>
 
           <div v-for="telefone in (cliente.telefones || [])" :key="`telefone-${telefone.id}`" class="flex items-center gap-2 mt-1 text-sm text-gray-600">
