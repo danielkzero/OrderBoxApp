@@ -44,7 +44,11 @@
               <td class="px-3 py-2">
                 <input type="checkbox" :checked="selectedClienteIds.includes(cliente.id)" @change="toggleCliente(cliente.id)" />
               </td>
-              <td class="px-3 py-2 text-indigo-700">{{ cliente.razao_social }}</td>
+              <td class="px-3 py-2">
+                <Link :href="`/${empresaId}/clientes/${cliente.id}/show`" class="link-cliente">
+                  {{ cliente.razao_social }}
+                </Link>
+              </td>
               <td class="px-3 py-2">{{ cliente.cidade || "--" }}</td>
               <td class="px-3 py-2">{{ cliente.estado || "--" }}</td>
               <td class="px-3 py-2">{{ formatarLista(cliente.tags) }}</td>
@@ -158,13 +162,14 @@
         </div>
       </aside>
     </div>
+
   </ClientesPageShell>
 </template>
 
 <script setup>
 import AppLayout from "@/layouts/AppLayout.vue";
 import ClientesPageShell from "@/pages/Clientes/components/ClientesPageShell.vue";
-import { router, usePage } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import { computed, reactive, ref, watch } from "vue";
 
 defineOptions({ layout: AppLayout });
@@ -312,6 +317,7 @@ function salvarVinculos(acao) {
     },
   });
 }
+
 </script>
 
 <style scoped>
@@ -380,5 +386,15 @@ function salvarVinculos(acao) {
   padding: 10px 12px;
   font-size: 14px;
   color: #374151;
+}
+
+.link-cliente {
+  color: var(--color-indigo-600);
+  font-weight: 600;
+  text-align: left;
+}
+
+.link-cliente:hover {
+  text-decoration: underline;
 }
 </style>
