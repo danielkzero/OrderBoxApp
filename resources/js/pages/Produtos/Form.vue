@@ -1,4 +1,10 @@
 <template>
+  <ProdutosPageShell
+    :main-tabs="mainTabs"
+    active-main-tab="produtos"
+    :sub-tabs="subTabs"
+    active-sub-tab="produtos_tabelas"
+  >
   <div class="bg-white rounded-sm border border-gray-200">
     <div class="border-b border-gray-200 px-6 py-4">
       <h1 class="text-2xl font-semibold text-gray-700 uppercase">
@@ -306,12 +312,14 @@
       </div>
     </div>
   </div>
+  </ProdutosPageShell>
 </template>
 
 <script setup>
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import ProdutosPageShell from '@/pages/Produtos/components/ProdutosPageShell.vue';
 
 defineOptions({ layout: AppLayout });
 
@@ -322,6 +330,17 @@ const produto = page.props.produto;
 const categorias = page.props.categorias || [];
 const tabelasPrecos = page.props.tabelas_precos || [];
 const variacoes = page.props.variacoes || [];
+const mainTabs = [
+  { key: 'produtos', label: 'Produtos', icon: 'bx bx-box', url: `/${empresaId}/produtos/tabelas` },
+  { key: 'promocoes', label: 'Promocoes', icon: 'bx bx-badge', url: `/${empresaId}/produtos/promocoes` },
+  { key: 'destaques', label: 'Destaques', icon: 'bx bx-star', url: `/${empresaId}/produtos/destaques` },
+  { key: 'configuracoes', label: 'Configuracoes', icon: 'bx bx-cog', url: `/${empresaId}/produtos/configuracoes/categorias` },
+];
+const subTabs = [
+  { key: 'produtos_tabelas', label: 'Produtos e Tabelas', icon: 'bx bx-list-ul', url: `/${empresaId}/produtos/tabelas` },
+  { key: 'gerenciar_estoque', label: 'Gerenciar Estoque', icon: 'bx bx-store', url: `/${empresaId}/produtos/gerenciar_estoque` },
+  { key: 'importar_fotos', label: 'Importar Fotos', icon: 'bx bx-image-add', url: `/${empresaId}/produtos/importar_fotos` },
+];
 const inputGaleriaRef = ref(null);
 const openImagensModal = ref(false);
 const uploadingImagens = ref(false);
