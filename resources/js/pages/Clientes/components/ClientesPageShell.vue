@@ -5,7 +5,7 @@
         <Link
           :href="`/${empresaId}/clientes`"
           class="inline-flex items-center gap-2 py-4 border-b-2"
-          :class="activeMainTab === 'clientes' ? 'border-indigo-600 text-gray-900' : 'border-transparent text-gray-500 hover:text-indigo-600'"
+          :class="activeMainTab === 'clientes' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-indigo-600'"
         >
           <i class="bx bxs-store-alt"></i>
           Clientes
@@ -13,7 +13,7 @@
         <Link
           :href="`/${empresaId}/clientes/configuracoes/campos_extras`"
           class="inline-flex items-center gap-2 py-4 border-b-2"
-          :class="activeMainTab === 'configuracoes' ? 'border-indigo-600 text-gray-900' : 'border-transparent text-gray-500 hover:text-indigo-600'"
+          :class="activeMainTab === 'configuracoes' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-indigo-600'"
         >
           <i class="bx bxs-cog"></i>
           Configurações
@@ -28,7 +28,7 @@
           :key="tab.key"
           :href="tab.url"
           class="py-3 text-sm font-semibold inline-flex items-center gap-2 border-b-2"
-          :class="tab.key === activeConfigTab ? 'border-indigo-600 text-gray-900' : 'border-transparent text-gray-400 hover:text-indigo-600'"
+          :class="tab.key === activeConfigTab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-indigo-600'"
         >
           <i :class="tab.icon"></i>
           {{ tab.label }}
