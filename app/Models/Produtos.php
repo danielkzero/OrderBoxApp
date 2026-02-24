@@ -43,4 +43,9 @@ class Produtos extends Model
     {
         return $this->hasMany(ProdutosImagens::class, 'produto_id', 'id');
     }
+
+    public function movimentos_estoque()
+    {
+        return $this->hasMany(ProdutosEstoqueMovimentos::class, 'produto_id', 'id');
+    }
 }
