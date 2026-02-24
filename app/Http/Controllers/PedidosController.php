@@ -9,6 +9,7 @@ use App\Models\Pedidos;
 use App\Models\PedidosExportacaoConfiguracoes;
 use App\Models\PedidosItens;
 use App\Models\Produtos;
+use App\Models\ProdutosConfiguracoesGerais;
 use App\Models\TabelasPrecosCidades;
 use App\Models\TiposPedidos;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -94,6 +96,104 @@ class PedidosController extends Controller
         return $this->sanitizeExportConfig($config);
     }
 
+    private function estoqueGerenciado(int|string $empresa): bool
+    {
+        return (bool) ProdutosConfiguracoesGerais::query()
+            ->where('empresa_id', (int) $empresa)
+            ->value('gerenciar_estoque');
+    }
+
+    private function mapearQuantidadePorProduto(iterable $itens): array
+    {
+        $mapa = [];
+
+        foreach ($itens as $item) {
+            $produtoId = (int) data_get($item, 'produto_id');
+            $quantidade = (int) data_get($item, 'quantidade', 0);
+
+            if ($produtoId <= 0 || $quantidade <= 0) {
+                continue;
+            }
+
+            $mapa[$produtoId] = ($mapa[$produtoId] ?? 0) + $quantidade;
+        }
+
+        return $mapa;
+    }
+
+    private function aplicarControleEstoque(
+        int|string $empresa,
+        array $consumoAnterior,
+        array $consumoNovo
+    ): void {
+        $produtoIds = collect(array_merge(array_keys($consumoAnterior), array_keys($consumoNovo)))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($produtoIds)) {
+            return;
+        }
+
+        $produtos = Produtos::query()
+            ->where('empresa_id', $empresa)
+            ->whereIn('id', $produtoIds)
+            ->lockForUpdate()
+            ->get(['id', 'nome', 'saldo_estoque', 'ativo', 'excluido'])
+            ->keyBy('id');
+
+        $insuficientes = [];
+
+        foreach ($produtoIds as $produtoId) {
+            $produto = $produtos->get($produtoId);
+            if (!$produto) {
+                continue;
+            }
+
+            $saldoAtual = (int) floor((float) ($produto->saldo_estoque ?? 0));
+            $delta = (int) (($consumoNovo[$produtoId] ?? 0) - ($consumoAnterior[$produtoId] ?? 0));
+
+            if ($delta > 0 && $saldoAtual < $delta) {
+                $insuficientes[] = sprintf(
+                    '%s (disponivel: %d, solicitado: %d)',
+                    $produto->nome ?: "Produto #{$produtoId}",
+                    max(0, $saldoAtual),
+                    $consumoNovo[$produtoId] ?? 0
+                );
+            }
+        }
+
+        if (!empty($insuficientes)) {
+            throw ValidationException::withMessages([
+                'itens' => [
+                    'Estoque insuficiente para os produtos: ' . implode('; ', $insuficientes),
+                ],
+            ]);
+        }
+
+        foreach ($produtoIds as $produtoId) {
+            $produto = $produtos->get($produtoId);
+            if (!$produto) {
+                continue;
+            }
+
+            $saldoAtual = (float) ($produto->saldo_estoque ?? 0);
+            $delta = (float) (($consumoNovo[$produtoId] ?? 0) - ($consumoAnterior[$produtoId] ?? 0));
+            $novoSaldo = $saldoAtual - $delta;
+
+            $produto->saldo_estoque = max(0, $novoSaldo);
+            $produto->ultima_alteracao = now();
+
+            if ($produto->saldo_estoque <= 0 && !$produto->excluido) {
+                $produto->ativo = false;
+            }
+
+            $produto->save();
+        }
+    }
+
     private function carregarDadosFormulario(int|string $empresa): array
     {
         $tabelaPorMunicipio = TabelasPrecosCidades::query()
@@ -160,7 +260,7 @@ class PedidosController extends Controller
             ->where('ativo', true)
             ->where('excluido', false)
             ->orderBy('nome')
-            ->get(['id', 'codigo', 'nome', 'preco_tabela', 'preco_minimo', 'multiplo', 'peso_bruto', 'unidade', 'ipi', 'st'])
+            ->get(['id', 'codigo', 'nome', 'preco_tabela', 'preco_minimo', 'multiplo', 'peso_bruto', 'unidade', 'ipi', 'st', 'saldo_estoque'])
             ->map(function ($produto) {
                 return [
                     'id' => $produto->id,
@@ -173,6 +273,7 @@ class PedidosController extends Controller
                     'unidade' => $produto->unidade,
                     'ipi' => $produto->ipi,
                     'st' => $produto->st,
+                    'saldo_estoque' => (float) ($produto->saldo_estoque ?? 0),
                     'imagem_base64' => $produto->imagens->first()?->imagem_base64,
                 ];
             });
@@ -198,6 +299,9 @@ class PedidosController extends Controller
             'formas_pagamentos' => $formasPagamentos,
             'condicoes_pagamentos' => $condicoesPagamentos,
             'tipos_pedidos' => $tiposPedidos,
+            'estoque_config' => [
+                'gerenciar_estoque' => $this->estoqueGerenciado($empresa),
+            ],
         ];
     }
 
@@ -230,12 +334,32 @@ class PedidosController extends Controller
         return DB::transaction(function () use ($validated, $empresa, $pedido) {
             $totalItens = 0;
             $valorFrete = (float) ($validated['valor_frete'] ?? 0);
+            $controleEstoqueAtivo = $this->estoqueGerenciado($empresa);
+            $consumoAnterior = [];
 
             if (!$pedido) {
                 $pedido = new Pedidos();
                 $pedido->empresa_id = (int) $empresa;
                 $pedido->criador_id = Auth::id();
                 $pedido->data_criacao = now();
+            } else {
+                $pedido->loadMissing('itens');
+                if ($pedido->status !== 'cancelado') {
+                    $consumoAnterior = $this->mapearQuantidadePorProduto(
+                        $pedido->itens->map(fn ($item) => [
+                            'produto_id' => (int) $item->produto_id,
+                            'quantidade' => (int) $item->quantidade,
+                        ])->all()
+                    );
+                }
+            }
+
+            $consumoNovo = $validated['status'] === 'cancelado'
+                ? []
+                : $this->mapearQuantidadePorProduto($validated['itens'] ?? []);
+
+            if ($controleEstoqueAtivo) {
+                $this->aplicarControleEstoque($empresa, $consumoAnterior, $consumoNovo);
             }
 
             $pedido->cliente_id = $validated['cliente_id'];
@@ -575,8 +699,23 @@ class PedidosController extends Controller
     {
         $this->validarAcessoEmpresa($empresa);
 
-        $pedidoModel = Pedidos::where('empresa_id', $empresa)->findOrFail($pedido);
-        $pedidoModel->delete();
+        DB::transaction(function () use ($empresa, $pedido) {
+            $pedidoModel = Pedidos::with('itens')
+                ->where('empresa_id', $empresa)
+                ->findOrFail($pedido);
+
+            if ($this->estoqueGerenciado($empresa) && $pedidoModel->status !== 'cancelado') {
+                $consumoAnterior = $this->mapearQuantidadePorProduto(
+                    $pedidoModel->itens->map(fn ($item) => [
+                        'produto_id' => (int) $item->produto_id,
+                        'quantidade' => (int) $item->quantidade,
+                    ])->all()
+                );
+                $this->aplicarControleEstoque($empresa, $consumoAnterior, []);
+            }
+
+            $pedidoModel->delete();
+        });
 
         return redirect("/{$empresa}/pedidos")->with('success', "Pedido #{$pedido} removido com sucesso.");
     }
